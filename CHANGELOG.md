@@ -7,6 +7,149 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.1.2] - 2025-11-20 às 22:26 UTC 🟢 VERSÃO FUNCIONAL - RECOMENDADA PARA BACKUP
+
+### 🎯 Status da Versão
+- ✅ **VERSÃO TOTALMENTE FUNCIONAL**
+- ✅ **RECOMENDADA PARA BACKUP E RESTORE**
+- ✅ **TESTADA E ESTÁVEL EM PRODUÇÃO**
+- 📅 **Data/Hora**: 20 de Novembro de 2025 às 22:26 UTC
+- 🔖 **Tag Git**: `v1.1.2`
+- 🐳 **Imagem Docker**: `localhost/chatwoot-sdr-ia:542ffce`
+- 📦 **Commit**: `542ffce`
+
+### ⚠️ IMPORTANTE - Use Esta Versão Como Backup
+Esta versão contém todas as funcionalidades do SDR IA funcionando corretamente:
+- ✅ Fluxo conversacional completo com 6 perguntas
+- ✅ Envio automático de mensagens aos leads
+- ✅ Qualificação final via OpenAI após todas as respostas
+- ✅ Interface administrativa funcional
+- ✅ Armazenamento de configurações no banco de dados
+- ✅ Listener registrado e detectando mensagens
+- ✅ Jobs processando sem erros
+
+**Se você precisar reverter para uma versão funcional, use esta!**
+
+### Fixed
+- 🐛 **CRÍTICO: Erro "undefined method 'agents' for Inbox" ao enviar mensagens**
+  - **Problema**: `ConversationManager.send_message` tentava acessar `conversation.inbox.agents.first`
+  - **Causa Raiz**: Classe `Inbox` do Chatwoot não possui método `agents`
+  - **Erro Completo**: `undefined method 'agents' for an instance of Inbox`
+  - **Impacto**: SDR IA detectava mensagens mas falhava ao tentar responder automaticamente
+  - **Solução**: Substituído por `conversation.assignee || @account.users.first`
+  - **Arquivo**: `plugins/sdr_ia/app/services/conversation_manager.rb:181-191`
+  - **Resultado**: Mensagens agora são enviadas com sucesso ✅
+
+### Changed
+- 🔄 **Método `send_message` refatorado**
+  ```ruby
+  # ANTES (quebrado):
+  sender: conversation.inbox.agents.first || @account.users.first
+
+  # DEPOIS (funcional):
+  sender = conversation.assignee || @account.users.first
+  ```
+  - Primeiro tenta usar o agente assignado à conversa
+  - Se não houver assignee, usa o primeiro usuário da conta
+  - Tratamento de erro melhorado com rescue
+  - Log detalhado de sucesso/erro
+
+### Technical Details
+
+#### Fluxo de Mensagens Funcionando
+1. ✅ WhatsApp → Chatwoot → `message.created` event
+2. ✅ EventDispatcherJob → SDR IA Listener detecta
+3. ✅ QualifyLeadJob agendado (delay de 2 segundos)
+4. ✅ ConversationManager.process_message! executado
+5. ✅ send_message() envia resposta automática
+6. ✅ Progresso atualizado (0/6 → 1/6 → 2/6... → 6/6)
+7. ✅ Após 6/6: Qualificação final via OpenAI
+
+#### Arquivos Modificados
+- **conversation_manager.rb** (linha 181-199)
+  - Método `send_message` corrigido
+  - Tratamento robusto de erros
+  - Logs informativos
+
+#### Logs Esperados (Funcionando)
+```
+[SDR IA] Nova mensagem incoming: contact_id=8
+[SDR IA] Job agendado para 2 segundos
+[SDR IA] Processando mensagem do contact 8
+[SDR IA] Mensagem enviada: Olá! Sou o assistente virtual...
+[SDR IA] Progresso atualizado: 1/6
+```
+
+#### Commit History
+- `542ffce` - Fix: Correct sender assignment in send_message method
+
+### Deployment
+
+#### Como Fazer Backup Desta Versão
+```bash
+# 1. Salvar imagem Docker
+docker save localhost/chatwoot-sdr-ia:542ffce | gzip > chatwoot-sdr-ia-v1.1.2-backup.tar.gz
+
+# 2. Backup do código
+cd /root
+tar -czf chatwoot-sdr-ia-v1.1.2-code.tar.gz chatwoot-sdr-ia/
+
+# 3. Verificar tag Git
+cd chatwoot-sdr-ia
+git tag -v v1.1.2
+```
+
+#### Como Restaurar Esta Versão
+```bash
+# Opção 1: Via Git tag
+cd /root/chatwoot-sdr-ia
+git checkout v1.1.2
+docker build -t localhost/chatwoot-sdr-ia:542ffce .
+docker service update --image localhost/chatwoot-sdr-ia:542ffce chatwoot_chatwoot_sidekiq
+docker service update --image localhost/chatwoot-sdr-ia:542ffce chatwoot_chatwoot_app
+
+# Opção 2: Via imagem Docker salva
+gunzip -c chatwoot-sdr-ia-v1.1.2-backup.tar.gz | docker load
+docker service update --image localhost/chatwoot-sdr-ia:542ffce chatwoot_chatwoot_sidekiq
+docker service update --image localhost/chatwoot-sdr-ia:542ffce chatwoot_chatwoot_app
+
+# Opção 3: Via commit hash
+cd /root/chatwoot-sdr-ia
+git checkout 542ffce
+# seguir passos do Opção 1
+```
+
+#### Verificação Pós-Deploy
+```bash
+# 1. Verificar serviços
+docker service ps chatwoot_chatwoot_sidekiq
+docker service ps chatwoot_chatwoot_app
+
+# 2. Verificar logs do SDR IA
+docker service logs -f chatwoot_chatwoot_sidekiq | grep "\[SDR IA\]"
+
+# 3. Testar enviando mensagem via WhatsApp
+# Deve aparecer: "[SDR IA] Mensagem enviada: ..."
+```
+
+### Breaking Changes
+Nenhuma. Atualização totalmente compatível com v1.1.1.
+
+### Known Issues
+Nenhum. Todos os problemas críticos foram resolvidos.
+
+### Performance
+- Delay de 2 segundos entre receber e processar mensagem (por design)
+- Envio de mensagens instantâneo após processamento
+- Qualificação final (após 6 respostas) depende da latência da OpenAI API (~2-5 segundos)
+
+### Security Notes
+- Mensagens criadas com sender apropriado (assignee ou admin)
+- Validação de custom_attributes preservada
+- Logs não expõem dados sensíveis
+
+---
+
 ## [1.1.1] - 2025-11-20
 
 ### Fixed
