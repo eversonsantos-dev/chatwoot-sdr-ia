@@ -7,6 +7,61 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-11-20
+
+### Fixed
+- 🐛 **Erro "TypeError: x.put is not a function" ao salvar configurações**
+  - **Problema raiz**: Interface Vue.js estava usando `accountAPI.put()` que não existe na API do Chatwoot
+  - **Solução**: Substituído por chamadas diretas ao `axios.put/get/post`
+  - Afetou: `frontend/routes/dashboard/settings/sdr-ia/Index.vue:133-181`
+  - Funções corrigidas: `saveSettings`, `loadSettings`, `loadStats`, `loadTeams`, `testQualification`
+
+- 🐛 **Assets compilados não sendo atualizados no navegador**
+  - **Problema**: Volume Docker `chatwoot_public` sobrescrevia assets novos com antigos
+  - **Causa**: Assets compilados estavam na imagem mas o volume montado tinha versão antiga
+  - **Solução**: Script de deploy agora copia todos os assets da imagem para o volume
+  - Hashes atualizados: `dashboard-Kor-mld7.js`, `Index-C235wyqW.js`, `DashboardIcon-Clsh_-4Z.js`
+
+- 🐛 **Ordem incorreta no Dockerfile causando cache de Vite**
+  - **Problema**: Cache era limpo DEPOIS de copiar arquivos frontend
+  - **Solução**: Reordenado para limpar cache → copiar arquivos → compilar
+  - Adicionada verificação: exibe primeiras 5 linhas do Index.vue para confirmar `/* global axios */`
+
+### Changed
+- 📦 **Dockerfile otimizado para compilação de assets**
+  - Cache do Vite limpo ANTES de copiar arquivos (linha 46-50)
+  - Verificação automática do arquivo copiado (linha 59-62)
+  - Garante que Vite compila código fonte correto
+
+- 🔄 **Processo de deploy atualizado**
+  - Copia TODOS os arquivos de `/app/public` para volume `chatwoot_public`
+  - Não apenas `/vite`, mas também manifests e outros assets
+  - Previne incompatibilidade de hashes entre HTML e assets
+
+### Technical Details
+- **Commit**: `e554c4d`
+- **Imagem Docker**: `localhost/chatwoot-sdr-ia:e554c4d`
+- **Arquivos modificados**:
+  - `Dockerfile` (linhas 46-62)
+  - `frontend/routes/dashboard/settings/sdr-ia/Index.vue` (5 funções)
+  - Scripts de deploy atualizados
+- **Verificação**:
+  - ✅ `Index-C235wyqW.js` contém 5 ocorrências de `axios`
+  - ✅ 0 ocorrências de `accountAPI`
+  - ✅ Assets datados de Nov 20 17:47 (atualizados)
+
+### Breaking Changes
+Nenhuma. Atualização totalmente compatível com versão anterior.
+
+### Deployment Notes
+Após atualizar para esta versão:
+1. Reconstruir imagem Docker: `./rebuild.sh`
+2. Deploy: `./deploy.sh` ou `docker service update --image localhost/chatwoot-sdr-ia:e554c4d`
+3. Copiar assets para volume: `docker run --rm -v chatwoot_public:/old localhost/chatwoot-sdr-ia:e554c4d sh -c "rm -rf /old/* && cp -r /app/public/* /old/"`
+4. Limpar cache do navegador no primeiro acesso
+
+---
+
 ## [1.1.0] - 2025-11-20
 
 ### Added
