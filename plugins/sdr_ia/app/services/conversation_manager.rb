@@ -179,18 +179,22 @@ module SdrIa
     end
 
     def send_message(content)
+      # Pega o primeiro usuário da conta como sender
+      sender = conversation.assignee || @account.users.first
+
       message = conversation.messages.create!(
         account: @account,
         inbox: conversation.inbox,
         message_type: :outgoing,
         content: content,
-        sender: conversation.inbox.agents.first || @account.users.first
+        sender: sender
       )
 
       Rails.logger.info "[SDR IA] Mensagem enviada: #{content[0..50]}..."
       message
     rescue StandardError => e
       Rails.logger.error "[SDR IA] Erro ao enviar mensagem: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n") if e.backtrace
       nil
     end
 
