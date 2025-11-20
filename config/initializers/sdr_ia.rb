@@ -8,8 +8,8 @@
 # para capturar eventos de conversas e mensagens.
 
 Rails.application.config.to_prepare do
-  plugin_path = Rails.root.join('plugins/lib/sdr_ia.rb')
-  routes_path = Rails.root.join('plugins/config/routes.rb')
+  plugin_path = Rails.root.join('plugins/sdr_ia/lib/sdr_ia.rb')
+  routes_path = Rails.root.join('plugins/sdr_ia/config/routes.rb')
 
   if File.exist?(plugin_path)
     require plugin_path
