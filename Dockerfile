@@ -43,5 +43,17 @@ RUN sed -i '/"INTEGRATIONS": "Integrações",/a\    "SDR_IA": "SDR IA",' /app/ap
 # Criar diretórios necessários
 RUN mkdir -p /app/tmp/cache /app/tmp/pids
 
+# Instalar pnpm e recompilar assets frontend
+RUN apk add --no-cache curl bash && \
+    export SHELL=/bin/bash && \
+    curl -fsSL https://get.pnpm.io/install.sh | bash - && \
+    export PNPM_HOME="/root/.local/share/pnpm" && \
+    export PATH="$PNPM_HOME:$PATH" && \
+    cd /app && \
+    pnpm install && \
+    SECRET_KEY_BASE=placeholder RAILS_ENV=production bundle exec rails assets:precompile && \
+    apk del curl bash && \
+    rm -rf /root/.cache /root/.local
+
 # O resto do processo segue o entrypoint original do Chatwoot
-# Que vai rodar migrations, precompilar assets, etc.
+# Que vai rodar migrations, etc.
