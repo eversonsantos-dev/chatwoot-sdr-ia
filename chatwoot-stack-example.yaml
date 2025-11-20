@@ -1,0 +1,105 @@
+# Chatwoot Stack Configuration Example with SDR IA Module
+#
+# Este é um exemplo de como configurar seu stack do Chatwoot
+# para usar a imagem customizada com o módulo SDR IA.
+#
+# IMPORTANTE:
+# - Este é apenas um EXEMPLO
+# - Adapte conforme sua configuração atual
+# - Mantenha suas variáveis de ambiente existentes
+# - Apenas mude a imagem de "chatwoot/chatwoot" para "localhost/chatwoot-sdr-ia"
+
+version: '3.8'
+
+services:
+  chatwoot_app:
+    # ╔════════════════════════════════════════════════════╗
+    # ║  MUDANÇA PRINCIPAL: Use sua imagem customizada    ║
+    # ╚════════════════════════════════════════════════════╝
+    image: localhost/chatwoot-sdr-ia:latest  # <-- MUDE AQUI
+    # image: chatwoot/chatwoot:v4.1.0  # <-- Imagem antiga
+
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+
+    environment:
+      # Suas variáveis de ambiente existentes
+      - NODE_ENV=production
+      - RAILS_ENV=production
+      - INSTALLATION_ENV=docker
+
+      # Database
+      - POSTGRES_HOST=pgvector
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DATABASE=chatwoot_production
+
+      # Redis
+      - REDIS_URL=redis://redis:6379
+
+      # ... todas as suas outras variáveis ...
+
+    networks:
+      - chatwoot_network
+
+    volumes:
+      - chatwoot_storage:/app/storage
+
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+
+  chatwoot_sidekiq:
+    # ╔════════════════════════════════════════════════════╗
+    # ║  MUDANÇA: Sidekiq também usa a imagem customizada ║
+    # ╚════════════════════════════════════════════════════╝
+    image: localhost/chatwoot-sdr-ia:latest  # <-- MUDE AQUI
+
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+    environment:
+      # Mesmas variáveis do chatwoot_app
+      - NODE_ENV=production
+      - RAILS_ENV=production
+      - POSTGRES_HOST=pgvector
+      # ... etc ...
+
+    networks:
+      - chatwoot_network
+
+    volumes:
+      - chatwoot_storage:/app/storage
+
+    command: bundle exec sidekiq -C config/sidekiq.yml
+
+  # Seus outros serviços (postgres, redis, etc) permanecem iguais
+  # ...
+
+networks:
+  chatwoot_network:
+    driver: overlay
+
+volumes:
+  chatwoot_storage:
+    driver: local
+
+# ╔════════════════════════════════════════════════════════════╗
+# ║  INSTRUÇÕES DE USO:                                        ║
+# ╠════════════════════════════════════════════════════════════╣
+# ║  1. Copie sua configuração atual (chatwoot.yaml)           ║
+# ║  2. Mude apenas as linhas "image:" dos serviços            ║
+# ║     chatwoot_app e chatwoot_sidekiq                        ║
+# ║  3. Mantenha TODAS as outras configurações                 ║
+# ║  4. Deploy: docker stack deploy -c chatwoot.yaml chatwoot  ║
+# ╚════════════════════════════════════════════════════════════╝

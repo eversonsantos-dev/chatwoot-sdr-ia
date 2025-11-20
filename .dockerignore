@@ -1,0 +1,28 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+
+# Scripts (não necessários na imagem)
+install.sh
+update.sh
+uninstall.sh
+rebuild.sh
+deploy.sh
+
+# Development
+.env
+.env.*
+*.log
+tmp/
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

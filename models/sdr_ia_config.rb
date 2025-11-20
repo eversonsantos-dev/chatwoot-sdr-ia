@@ -1,0 +1,66 @@
+# frozen_string_literal: true
+
+class SdrIaConfig < ApplicationRecord
+  belongs_to :account
+
+  validates :account_id, uniqueness: true
+
+  # Retorna configuração para uma conta (cria se não existir)
+  def self.for_account(account)
+    find_or_create_by(account: account)
+  end
+
+  # Retorna hash de configuração no formato esperado pelo sistema
+  def to_config_hash
+    {
+      'sdr_ia' => {
+        'enabled' => enabled,
+        'debug_mode' => debug_mode,
+        'openai' => {
+          'api_key' => openai_api_key,
+          'model' => openai_model,
+          'max_tokens' => openai_max_tokens,
+          'temperature' => openai_temperature
+        },
+        'scoring' => {
+          'weights' => scoring_weights.deep_symbolize_keys
+        },
+        'temperature_thresholds' => {
+          'quente' => threshold_quente,
+          'morno' => threshold_morno,
+          'frio' => threshold_frio,
+          'muito_frio' => threshold_muito_frio
+        },
+        'teams' => {
+          'quente_team_id' => quente_team_id,
+          'morno_team_id' => morno_team_id
+        },
+        'procedimentos' => procedimentos,
+        'reconduzir' => {
+          'max_tentativas' => max_tentativas_reconduzir,
+          'delay_segundos' => delay_reconduzir_segundos
+        }
+      }
+    }
+  end
+
+  # Atualiza a partir de um hash de parâmetros do frontend
+  def update_from_params(params)
+    update(
+      enabled: params.dig(:sdr_ia, :enabled),
+      debug_mode: params.dig(:sdr_ia, :debug_mode),
+      openai_api_key: params.dig(:sdr_ia, :openai, :api_key),
+      openai_model: params.dig(:sdr_ia, :openai, :model),
+      openai_max_tokens: params.dig(:sdr_ia, :openai, :max_tokens),
+      openai_temperature: params.dig(:sdr_ia, :openai, :temperature),
+      scoring_weights: params.dig(:sdr_ia, :scoring, :weights),
+      threshold_quente: params.dig(:sdr_ia, :temperature_thresholds, :quente),
+      threshold_morno: params.dig(:sdr_ia, :temperature_thresholds, :morno),
+      threshold_frio: params.dig(:sdr_ia, :temperature_thresholds, :frio),
+      threshold_muito_frio: params.dig(:sdr_ia, :temperature_thresholds, :muito_frio),
+      quente_team_id: params.dig(:sdr_ia, :teams, :quente_team_id),
+      morno_team_id: params.dig(:sdr_ia, :teams, :morno_team_id),
+      procedimentos: params.dig(:sdr_ia, :procedimentos)
+    )
+  end
+end

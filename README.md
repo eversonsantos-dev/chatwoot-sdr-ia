@@ -103,9 +103,44 @@ O **SDR IA Module** é um plugin modular e não-invasivo para Chatwoot que autom
 
 ## 📦 Instalação
 
-### Método 1: Script Automatizado ⭐ (Recomendado)
+### Método 1: Docker Build ⭐ (Recomendado para Produção)
 
-**O jeito mais fácil e rápido!**
+**Método mais profissional e fácil de manter!**
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/eversonsantos-dev/chatwoot-sdr-ia.git
+cd chatwoot-sdr-ia
+
+# 2. Build da imagem customizada
+./rebuild.sh
+
+# 3. Deploy no seu ambiente
+./deploy.sh
+```
+
+**Pronto! ✅** O processo automaticamente:
+- ✅ Cria imagem Docker customizada do Chatwoot
+- ✅ Inclui todos os arquivos do módulo SDR IA
+- ✅ Compila assets frontend corretamente
+- ✅ Atualiza os serviços no Docker Swarm
+- ✅ Verifica se o módulo carregou
+
+**Vantagens:**
+- 🎯 **Profissional** - Jeito correto para produção
+- 🔄 **Persistente** - Sobrevive a restarts
+- 📦 **Versionado** - Fácil rollback
+- 🚀 **Rápido de atualizar** - Só rebuild e redeploy
+
+**Documentação completa:** [DEPLOY.md](DEPLOY.md)
+
+**Tempo total:** ~10-15 minutos
+
+---
+
+### Método 2: Script Automatizado (Desenvolvimento/Teste)
+
+**Útil para testar rapidamente, mas não recomendado para produção**
 
 ```bash
 # 1. Clone o repositório
@@ -116,25 +151,11 @@ cd chatwoot-sdr-ia
 ./install.sh
 ```
 
-**Pronto! ✅** O script automaticamente:
-- Detecta seu container Chatwoot
-- Faz backup dos arquivos existentes
-- Instala todos os componentes
-- Cria custom attributes e labels
-- Configura menu e rotas
-- Reinicia os serviços
-- Testa a instalação
+⚠️ **Limitação:** Arquivos são copiados para o container em execução e podem ser perdidos ao reiniciar.
 
-**Opções disponíveis:**
-```bash
-./install.sh --help                    # Ver todas as opções
-./install.sh --container <nome>        # Especificar container
-./install.sh --skip-backup             # Pular backup (não recomendado)
-```
+---
 
-**Tempo total:** ~2 minutos
-
-### Método 2: Instalação Manual
+### Método 3: Instalação Manual
 
 <details>
 <summary>Clique para ver instruções manuais</summary>
@@ -331,37 +352,41 @@ O script verifica:
 
 ## 🔄 Atualização
 
-### Script Automatizado ⭐
+### Método Docker Build (Recomendado) ⭐
 
 Quando houver uma nova versão disponível no GitHub:
+
+```bash
+# No diretório do projeto
+cd /root/chatwoot-sdr-ia
+
+# 1. Atualizar código
+git pull origin main
+
+# 2. Rebuild da imagem
+./rebuild.sh
+
+# 3. Deploy
+./deploy.sh
+```
+
+**Tempo total:** ~10-15 minutos
+**Zero downtime:** Deploy usa rolling update
+
+---
+
+### Método Script (Desenvolvimento)
 
 ```bash
 # No diretório do projeto
 ./update.sh
 ```
 
-O script irá:
-- Verificar atualizações disponíveis
-- Mostrar o que mudou (changelog)
-- Fazer backup antes de atualizar
-- Baixar nova versão do GitHub
-- Atualizar arquivos no container
-- Reiniciar serviços
+⚠️ **Atenção:** Mudanças podem ser perdidas ao reiniciar containers.
 
-**Opções:**
-```bash
-./update.sh --help                     # Ver opções
-./update.sh --skip-backup              # Pular backup
-./update.sh --no-restart               # Não reiniciar serviços
-```
+---
 
-### Manual
-
-```bash
-cd chatwoot-sdr-ia
-git pull origin main
-# Copie os arquivos atualizados (mesmo processo da instalação)
-```
+**Ver detalhes:** [DEPLOY.md](DEPLOY.md#atualização)
 
 ## 🗑️ Desinstalação
 
