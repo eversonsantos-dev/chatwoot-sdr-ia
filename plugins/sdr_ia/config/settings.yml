@@ -1,0 +1,45 @@
+sdr_ia:
+  enabled: true
+  debug_mode: false
+
+  openai:
+    api_key_env: "OPENAI_API_KEY"
+    model: "gpt-4-turbo-preview"
+    max_tokens: 2000
+    temperature: 0.3
+
+  scoring:
+    weights:
+      urgencia:
+        esta_semana: 30
+        proximas_2_semanas: 25
+        ate_30_dias: 15
+        acima_30_dias: 5
+        pesquisando: 0
+      conhecimento:
+        conhece_valores: 25
+        tem_duvidas: 15
+        primeira_pesquisa: 5
+      interesse_definido: 20
+      motivacao_clara: 20
+
+  temperature_thresholds:
+    quente: 70
+    morno: 40
+    frio: 20
+    muito_frio: 0
+
+  teams:
+    quente_team_id: null
+    morno_team_id: null
+
+  procedimentos:
+    - "Harmonização Facial"
+    - "Emagrecimento"
+    - "Cabelo"
+    - "Botox"
+    - "Pele"
+
+  reconduzir:
+    max_tentativas: 3
+    delay_segundos: 2
