@@ -19,8 +19,8 @@ module SdrIa
         return
       end
 
-      # Usar ConversationManager para fluxo conversacional
-      manager = ConversationManager.new(
+      # Usar ConversationManagerV2 para fluxo conversacional
+      manager = ConversationManagerV2.new(
         contact: contact,
         conversation: conversation,
         account: contact.account

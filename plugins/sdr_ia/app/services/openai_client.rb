@@ -17,6 +17,46 @@ module SdrIa
       raise Error, "OpenAI API Key não configurada" unless @api_key&.present?
     end
 
+    # Gera resposta conversacional em tempo real
+    def generate_response(conversation_history, system_prompt)
+      uri = URI('https://api.openai.com/v1/chat/completions')
+      request = Net::HTTP::Post.new(uri)
+      request['Authorization'] = "Bearer #{@api_key}"
+      request['Content-Type'] = 'application/json'
+
+      messages = [{ role: 'system', content: system_prompt }]
+
+      # Adiciona histórico de mensagens
+      conversation_history.each do |msg|
+        messages << {
+          role: msg[:role], # 'user' ou 'assistant'
+          content: msg[:content]
+        }
+      end
+
+      request.body = {
+        model: @config['openai']['model'],
+        messages: messages,
+        temperature: @config['openai']['temperature'],
+        max_tokens: 500 # Respostas curtas
+      }.to_json
+
+      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+        http.request(request)
+      end
+
+      if response.is_a?(Net::HTTPSuccess)
+        result = JSON.parse(response.body)
+        result.dig('choices', 0, 'message', 'content')
+      else
+        Rails.logger.error "[SDR IA] Erro na API OpenAI: #{response.code} - #{response.body}"
+        nil
+      end
+    rescue StandardError => e
+      Rails.logger.error "[SDR IA] Erro ao gerar resposta: #{e.message}"
+      nil
+    end
+
     def analyze_conversation(conversation_history, system_prompt, analysis_prompt)
       uri = URI('https://api.openai.com/v1/chat/completions')
       request = Net::HTTP::Post.new(uri)
