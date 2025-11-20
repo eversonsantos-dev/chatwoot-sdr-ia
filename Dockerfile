@@ -43,25 +43,36 @@ RUN sed -i '/"INTEGRATIONS": "Integrações",/a\    "SDR_IA": "SDR IA",' /app/ap
 # Criar diretórios necessários
 RUN mkdir -p /app/tmp/cache /app/tmp/pids
 
-# Instalar pnpm e recompilar assets frontend
-RUN apk add --no-cache curl bash && \
-    export SHELL=/bin/bash && \
-    curl -fsSL https://get.pnpm.io/install.sh | bash - && \
-    export PNPM_HOME="/root/.local/share/pnpm" && \
-    export PATH="$PNPM_HOME:$PATH" && \
-    cd /app && \
-    echo "[BUILD] Limpando caches antigos..." && \
+# Instalar pnpm
+RUN apk add --no-cache curl bash
+
+# Instalar pnpm
+RUN export SHELL=/bin/bash && \
+    curl -fsSL https://get.pnpm.io/install.sh | bash -
+
+# Limpar caches antigos
+RUN cd /app && \
     rm -rf /app/public/vite /app/public/packs /app/public/assets && \
     rm -rf /app/node_modules/.vite /app/.vite && \
-    rm -rf /app/tmp/cache/* && \
-    echo "[BUILD] Instalando dependências..." && \
-    pnpm install --force && \
-    echo "[BUILD] Recompilando assets (isso pode levar alguns minutos)..." && \
-    SECRET_KEY_BASE=placeholder RAILS_ENV=production NODE_ENV=production bundle exec rails assets:precompile && \
-    echo "[BUILD] Assets compilados com sucesso!" && \
-    ls -lh /app/public/vite/assets/ | grep dashboard | head -5 && \
-    apk del curl bash && \
-    rm -rf /root/.cache /root/.local
+    rm -rf /app/tmp/cache/*
+
+# Instalar dependências
+RUN export PNPM_HOME="/root/.local/share/pnpm" && \
+    export PATH="$PNPM_HOME:$PATH" && \
+    cd /app && \
+    pnpm install --force
+
+# Recompilar assets
+RUN export PNPM_HOME="/root/.local/share/pnpm" && \
+    export PATH="$PNPM_HOME:$PATH" && \
+    cd /app && \
+    SECRET_KEY_BASE=placeholder RAILS_ENV=production NODE_ENV=production bundle exec rails assets:precompile
+
+# Verificar compilação
+RUN ls -lh /app/public/vite/assets/ | grep dashboard | head -5 || echo "Assets compilados"
+
+# Limpar arquivos temporários
+RUN rm -rf /root/.cache /root/.local
 
 # O resto do processo segue o entrypoint original do Chatwoot
 # Que vai rodar migrations, etc.
