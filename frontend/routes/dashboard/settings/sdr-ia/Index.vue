@@ -1,4 +1,5 @@
 <script setup>
+/* global axios */
 import { ref, computed, onMounted } from 'vue';
 import { useStore, useStoreGetters } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -6,7 +7,6 @@ import { useI18n } from 'vue-i18n';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import accountAPI from 'dashboard/api/account';
 
 const { t } = useI18n();
 const store = useStore();
@@ -97,7 +97,7 @@ const tabs = [
 const loadSettings = async () => {
   loading.value = true;
   try {
-    const response = await accountAPI.get(`${currentAccount.value.id}/sdr_ia/settings`);
+    const response = await axios.get(`/api/v1/accounts/${currentAccount.value.id}/sdr_ia/settings`);
     if (response.data.settings) {
       settings.value = response.data.settings;
     }
@@ -112,7 +112,7 @@ const loadSettings = async () => {
 // Load stats
 const loadStats = async () => {
   try {
-    const response = await accountAPI.get(`${currentAccount.value.id}/sdr_ia/stats`);
+    const response = await axios.get(`/api/v1/accounts/${currentAccount.value.id}/sdr_ia/stats`);
     stats.value = response.data;
   } catch (error) {
     console.error('Erro ao carregar estatísticas:', error);
@@ -122,7 +122,7 @@ const loadStats = async () => {
 // Load teams
 const loadTeams = async () => {
   try {
-    const response = await accountAPI.get(`${currentAccount.value.id}/sdr_ia/teams`);
+    const response = await axios.get(`/api/v1/accounts/${currentAccount.value.id}/sdr_ia/teams`);
     teams.value = response.data.teams || [];
   } catch (error) {
     console.error('Erro ao carregar times:', error);
@@ -133,8 +133,8 @@ const loadTeams = async () => {
 const saveSettings = async () => {
   savingSettings.value = true;
   try {
-    const response = await accountAPI.put(
-      `${currentAccount.value.id}/sdr_ia/settings`,
+    const response = await axios.put(
+      `/api/v1/accounts/${currentAccount.value.id}/sdr_ia/settings`,
       { settings: settings.value }
     );
 
@@ -163,8 +163,8 @@ const testQualification = async () => {
   testResult.value = null;
 
   try {
-    const response = await accountAPI.post(
-      `${currentAccount.value.id}/sdr_ia/test`,
+    const response = await axios.post(
+      `/api/v1/accounts/${currentAccount.value.id}/sdr_ia/test`,
       { contact_id: testContactId.value }
     );
 

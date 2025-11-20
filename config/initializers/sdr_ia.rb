@@ -9,21 +9,23 @@
 
 Rails.application.config.to_prepare do
   plugin_path = Rails.root.join('plugins/sdr_ia/lib/sdr_ia.rb')
-  routes_path = Rails.root.join('plugins/sdr_ia/config/routes.rb')
 
   if File.exist?(plugin_path)
     require plugin_path
-
-    # Carrega rotas do plugin
-    if File.exist?(routes_path)
-      load routes_path
-      Rails.logger.info "[SDR IA] Rotas carregadas"
-    end
+    Rails.logger.info "[SDR IA] Carregando módulo SDR IA..."
 
     if SdrIa.enabled?
-      Rails.logger.info "[SDR IA] Registrando listener no dispatcher..."
-
       begin
+        # Carregar classes necessárias ANTES de registrar o listener
+        Rails.logger.info "[SDR IA] Módulo habilitado. Registrando listener..."
+
+        # Força o carregamento das classes do plugin
+        require Rails.root.join('plugins/sdr_ia/app/services/openai_client')
+        require Rails.root.join('plugins/sdr_ia/app/services/lead_qualifier')
+        require Rails.root.join('plugins/sdr_ia/app/jobs/qualify_lead_job')
+        require Rails.root.join('plugins/sdr_ia/app/listeners/sdr_ia_listener')
+
+        # Agora que as classes estão carregadas, registra o listener
         listener = SdrIa::Listener.instance
         dispatcher = Rails.configuration.dispatcher
 
@@ -37,8 +39,11 @@ Rails.application.config.to_prepare do
         else
           Rails.logger.info "[SDR IA] Listener já estava registrado"
         end
+
+        Rails.logger.info "[SDR IA] Classes carregadas. Listener pronto."
       rescue StandardError => e
-        Rails.logger.error "[SDR IA] Erro ao registrar listener: #{e.message}"
+        Rails.logger.error "[SDR IA] Erro ao carregar/registrar: #{e.message}"
+        Rails.logger.error e.backtrace.join("\n")
       end
     else
       Rails.logger.info "[SDR IA] Módulo desabilitado"

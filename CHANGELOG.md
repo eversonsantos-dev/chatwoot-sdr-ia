@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-11-20
+
 ### Added
 - 🎨 **Interface Visual Completa para Configuração de Prompts**
   - Editor de prompts do sistema e análise diretamente no painel
@@ -15,23 +17,58 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
   - Gerenciamento de procedimentos com adicionar/remover
   - Configuração de pesos de scoring em tempo real
   - Thresholds de temperatura ajustáveis visualmente
+  - Menu lateral com ícone "brain" e label "SDR IA"
+  - Rota: `/accounts/:accountId/settings/sdr-ia`
 
 - 💾 **Configurações Armazenadas no Banco de Dados**
-  - Novos campos na migration: `prompt_system`, `prompt_analysis`, `perguntas_etapas`
+  - Migration `20251120152500_add_prompts_to_sdr_ia_configs.rb`
+  - Novos campos: `prompt_system` (text), `prompt_analysis` (text), `perguntas_etapas` (jsonb)
   - Cada conta pode ter configuração própria
   - API Key OpenAI armazenada no banco com segurança
   - Fallback automático para YAML caso banco não esteja disponível
+  - Valores padrão populados automaticamente
+
+- 🔌 **API Endpoints**
+  - GET `/api/v1/accounts/:accountId/sdr_ia/config` - Buscar configuração
+  - PUT `/api/v1/accounts/:accountId/sdr_ia/config` - Atualizar configuração
+  - Autenticação via API key do Chatwoot
+  - Permissões: apenas administradores
 
 ### Changed
 - 🔄 **Módulo SdrIa Atualizado**
   - Busca configurações do banco de dados primeiro
   - Fallback inteligente para arquivos YAML
   - Suporta configuração por conta (multi-tenant)
+  - Método `SdrIa.config(account)` aceita parâmetro opcional de conta
 
 - 🤖 **Serviços Atualizados**
-  - `LeadQualifier` agora usa prompts do banco
-  - `OpenaiClient` busca API key do banco primeiro
+  - `LeadQualifier` agora usa prompts do banco (`plugins/sdr_ia/app/services/lead_qualifier.rb:14`)
+  - `OpenaiClient` busca API key do banco primeiro (`plugins/sdr_ia/app/services/openai_client.rb:12`)
   - Suporte a passar account para configurações específicas
+  - Método `load_prompts_from_yaml` como fallback seguro
+
+- 📦 **Dockerfile Atualizado**
+  - Agora copia ambas as migrations (linha 27-28)
+  - Assets do frontend recompilados com Vite
+  - Suporte completo para Vue.js 3 Composition API
+
+### Technical Details
+
+#### Arquivos Modificados/Criados
+- `db/migrate/20251120152500_add_prompts_to_sdr_ia_configs.rb` (novo)
+- `models/sdr_ia_config.rb` (atualizado - método `to_config_hash`)
+- `frontend/routes/dashboard/settings/sdr-ia/Index.vue` (910 linhas)
+- `plugins/sdr_ia/lib/sdr_ia.rb` (atualizado - método `config`)
+- `plugins/sdr_ia/app/services/lead_qualifier.rb` (atualizado)
+- `plugins/sdr_ia/app/services/openai_client.rb` (atualizado)
+- `Dockerfile` (atualizado - linha 27-28)
+
+#### Interface Vue.js (910 linhas)
+**Componentes Principais:**
+- Tab 1 - Configurações Gerais: Toggle de ativação, debug, modelo OpenAI, temperatura, max tokens
+- Tab 2 - Prompts da IA: Editores de texto para prompt do sistema e prompt de análise
+- Tab 3 - Perguntas por Etapa: 6 campos editáveis (nome, interesse, urgência, conhecimento, motivação, localização)
+- Tab 4 - Sistema de Scoring: Sliders para pesos de urgência, conhecimento e thresholds de temperatura
 
 ### Benefits
 - ✅ Não precisa mais editar arquivos YAML manualmente
@@ -39,6 +76,14 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - ✅ Configuração 100% pelo painel administrativo
 - ✅ Alterações em tempo real
 - ✅ Multi-tenant ready (cada conta tem sua config)
+- ✅ Interface intuitiva com validação de campos
+- ✅ Botão "Salvar Configurações" com feedback visual
+
+### Deployment
+- **Imagem**: `localhost/chatwoot-sdr-ia:6cd5b5c`
+- **Build Date**: 2025-11-20
+- **Container ID**: 6bb4126452e8
+- **Status**: ✅ Deployed e rodando
 
 ---
 

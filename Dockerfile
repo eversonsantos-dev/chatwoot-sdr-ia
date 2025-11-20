@@ -23,22 +23,15 @@ COPY controllers/api/v1/accounts/sdr_ia /app/app/controllers/api/v1/accounts/sdr
 # Copiar model
 COPY models/sdr_ia_config.rb /app/app/models/sdr_ia_config.rb
 
-# Copiar migration
+# Copiar migrations
 COPY db/migrate/20251120100414_create_sdr_ia_configs.rb /app/db/migrate/20251120100414_create_sdr_ia_configs.rb
+COPY db/migrate/20251120152500_add_prompts_to_sdr_ia_configs.rb /app/db/migrate/20251120152500_add_prompts_to_sdr_ia_configs.rb
 
 # Copiar initializer
 COPY config/initializers/sdr_ia.rb /app/config/initializers/sdr_ia.rb
 
-# Copiar frontend
-COPY frontend/routes/dashboard/settings/sdr-ia /app/app/javascript/dashboard/routes/dashboard/settings/sdr-ia
-
-# Copiar arquivos modificados do Chatwoot
-COPY frontend/settings.routes.js /app/app/javascript/dashboard/routes/dashboard/settings/settings.routes.js
-COPY frontend/sidebar-settings.js /app/app/javascript/dashboard/components/layout/config/sidebarItems/settings.js
-
-# Atualizar traduções
-RUN sed -i '/"INTEGRATIONS": "Integrações",/a\    "SDR_IA": "SDR IA",' /app/app/javascript/dashboard/i18n/locale/pt_BR/settings.json && \
-    sed -i '/"INTEGRATIONS": "Integrations",/a\    "SDR_IA": "SDR AI",' /app/app/javascript/dashboard/i18n/locale/en/settings.json
+# Copiar routes.rb modificado com rotas do SDR IA
+COPY config/routes.rb /app/config/routes.rb
 
 # Criar diretórios necessários
 RUN mkdir -p /app/tmp/cache /app/tmp/pids
@@ -50,11 +43,27 @@ RUN apk add --no-cache curl bash
 RUN export SHELL=/bin/bash && \
     curl -fsSL https://get.pnpm.io/install.sh | bash -
 
-# Limpar caches antigos
+# IMPORTANTE: Limpar caches ANTES de copiar novos arquivos
 RUN cd /app && \
     rm -rf /app/public/vite /app/public/packs /app/public/assets && \
     rm -rf /app/node_modules/.vite /app/.vite && \
     rm -rf /app/tmp/cache/*
+
+# Copiar frontend (DEPOIS de limpar cache)
+COPY frontend/routes/dashboard/settings/sdr-ia /app/app/javascript/dashboard/routes/dashboard/settings/sdr-ia
+
+# Copiar arquivos modificados do Chatwoot
+COPY frontend/settings.routes.js /app/app/javascript/dashboard/routes/dashboard/settings/settings.routes.js
+COPY frontend/sidebar-settings.js /app/app/javascript/dashboard/components/layout/config/sidebarItems/settings.js
+
+# Verificar se o arquivo foi copiado corretamente
+RUN echo "=== Verificando Index.vue copiado ===" && \
+    head -5 /app/app/javascript/dashboard/routes/dashboard/settings/sdr-ia/Index.vue && \
+    echo "=== Verificação concluída ==="
+
+# Atualizar traduções
+RUN sed -i '/"INTEGRATIONS": "Integrações",/a\    "SDR_IA": "SDR IA",' /app/app/javascript/dashboard/i18n/locale/pt_BR/settings.json && \
+    sed -i '/"INTEGRATIONS": "Integrations",/a\    "SDR_IA": "SDR AI",' /app/app/javascript/dashboard/i18n/locale/en/settings.json
 
 # Instalar dependências
 RUN export PNPM_HOME="/root/.local/share/pnpm" && \
