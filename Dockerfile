@@ -50,8 +50,9 @@ RUN apk add --no-cache curl bash && \
     export PNPM_HOME="/root/.local/share/pnpm" && \
     export PATH="$PNPM_HOME:$PATH" && \
     cd /app && \
+    rm -rf /app/public/vite /app/public/packs /app/public/assets && \
     pnpm install && \
-    SECRET_KEY_BASE=placeholder RAILS_ENV=production bundle exec rails assets:precompile && \
+    SECRET_KEY_BASE=placeholder RAILS_ENV=production NODE_ENV=production bundle exec rails assets:precompile && \
     apk del curl bash && \
     rm -rf /root/.cache /root/.local
 
