@@ -21,6 +21,7 @@ Rails.application.config.to_prepare do
         # Força o carregamento das classes do plugin
         require Rails.root.join('plugins/sdr_ia/app/services/openai_client')
         require Rails.root.join('plugins/sdr_ia/app/services/lead_qualifier')
+        require Rails.root.join('plugins/sdr_ia/app/services/conversation_manager')
         require Rails.root.join('plugins/sdr_ia/app/jobs/qualify_lead_job')
         require Rails.root.join('plugins/sdr_ia/app/listeners/sdr_ia_listener')
 

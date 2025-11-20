@@ -28,7 +28,8 @@ class AsyncDispatcher < BaseDispatcher
         require plugin_path unless defined?(SdrIa)
 
         if SdrIa.respond_to?(:enabled?) && SdrIa.enabled?
-          # Carregar listener
+          # Carregar classes necessárias
+          require Rails.root.join('plugins/sdr_ia/app/services/conversation_manager') unless defined?(SdrIa::ConversationManager)
           require Rails.root.join('plugins/sdr_ia/app/listeners/sdr_ia_listener') unless defined?(SdrIa::Listener)
 
           base_listeners << SdrIa::Listener.instance
