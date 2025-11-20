@@ -7,8 +7,38 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
-### Em Desenvolvimento
-- Aguardando novas features e melhorias
+### Added
+- 🎨 **Interface Visual Completa para Configuração de Prompts**
+  - Editor de prompts do sistema e análise diretamente no painel
+  - 4 abas organizadas: Configurações Gerais, Prompts da IA, Perguntas por Etapa, Sistema de Scoring
+  - Configuração visual de todas as 6 perguntas do SDR
+  - Gerenciamento de procedimentos com adicionar/remover
+  - Configuração de pesos de scoring em tempo real
+  - Thresholds de temperatura ajustáveis visualmente
+
+- 💾 **Configurações Armazenadas no Banco de Dados**
+  - Novos campos na migration: `prompt_system`, `prompt_analysis`, `perguntas_etapas`
+  - Cada conta pode ter configuração própria
+  - API Key OpenAI armazenada no banco com segurança
+  - Fallback automático para YAML caso banco não esteja disponível
+
+### Changed
+- 🔄 **Módulo SdrIa Atualizado**
+  - Busca configurações do banco de dados primeiro
+  - Fallback inteligente para arquivos YAML
+  - Suporta configuração por conta (multi-tenant)
+
+- 🤖 **Serviços Atualizados**
+  - `LeadQualifier` agora usa prompts do banco
+  - `OpenaiClient` busca API key do banco primeiro
+  - Suporte a passar account para configurações específicas
+
+### Benefits
+- ✅ Não precisa mais editar arquivos YAML manualmente
+- ✅ Teste rápido de ajustes nos prompts sem restart
+- ✅ Configuração 100% pelo painel administrativo
+- ✅ Alterações em tempo real
+- ✅ Multi-tenant ready (cada conta tem sua config)
 
 ---
 
