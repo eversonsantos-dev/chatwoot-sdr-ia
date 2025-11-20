@@ -15,26 +15,26 @@ LABEL version="1.0.0"
 USER root
 
 # Copiar plugin SDR IA
-COPY --chown=chatwoot:chatwoot plugins/sdr_ia /app/plugins/sdr_ia
+COPY plugins/sdr_ia /app/plugins/sdr_ia
 
 # Copiar controllers
-COPY --chown=chatwoot:chatwoot controllers/api/v1/accounts/sdr_ia /app/app/controllers/api/v1/accounts/sdr_ia
+COPY controllers/api/v1/accounts/sdr_ia /app/app/controllers/api/v1/accounts/sdr_ia
 
 # Copiar model
-COPY --chown=chatwoot:chatwoot models/sdr_ia_config.rb /app/app/models/sdr_ia_config.rb
+COPY models/sdr_ia_config.rb /app/app/models/sdr_ia_config.rb
 
 # Copiar migration
-COPY --chown=chatwoot:chatwoot db/migrate/20251120100414_create_sdr_ia_configs.rb /app/db/migrate/20251120100414_create_sdr_ia_configs.rb
+COPY db/migrate/20251120100414_create_sdr_ia_configs.rb /app/db/migrate/20251120100414_create_sdr_ia_configs.rb
 
 # Copiar initializer
-COPY --chown=chatwoot:chatwoot config/initializers/sdr_ia.rb /app/config/initializers/sdr_ia.rb
+COPY config/initializers/sdr_ia.rb /app/config/initializers/sdr_ia.rb
 
 # Copiar frontend
-COPY --chown=chatwoot:chatwoot frontend/routes/dashboard/settings/sdr-ia /app/app/javascript/dashboard/routes/dashboard/settings/sdr-ia
+COPY frontend/routes/dashboard/settings/sdr-ia /app/app/javascript/dashboard/routes/dashboard/settings/sdr-ia
 
 # Copiar arquivos modificados do Chatwoot
-COPY --chown=chatwoot:chatwoot frontend/settings.routes.js /app/app/javascript/dashboard/routes/dashboard/settings/settings.routes.js
-COPY --chown=chatwoot:chatwoot frontend/sidebar-settings.js /app/app/javascript/dashboard/components/layout/config/sidebarItems/settings.js
+COPY frontend/settings.routes.js /app/app/javascript/dashboard/routes/dashboard/settings/settings.routes.js
+COPY frontend/sidebar-settings.js /app/app/javascript/dashboard/components/layout/config/sidebarItems/settings.js
 
 # Atualizar traduções
 RUN sed -i '/"INTEGRATIONS": "Integrações",/a\    "SDR_IA": "SDR IA",' /app/app/javascript/dashboard/i18n/locale/pt_BR/settings.json && \
@@ -42,11 +42,6 @@ RUN sed -i '/"INTEGRATIONS": "Integrações",/a\    "SDR_IA": "SDR IA",' /app/ap
 
 # Criar diretórios necessários
 RUN mkdir -p /app/tmp/cache /app/tmp/pids
-
-# Dar permissões corretas
-RUN chown -R chatwoot:chatwoot /app/plugins /app/tmp
-
-USER chatwoot
 
 # O resto do processo segue o entrypoint original do Chatwoot
 # Que vai rodar migrations, precompilar assets, etc.
