@@ -50,9 +50,16 @@ RUN apk add --no-cache curl bash && \
     export PNPM_HOME="/root/.local/share/pnpm" && \
     export PATH="$PNPM_HOME:$PATH" && \
     cd /app && \
+    echo "[BUILD] Limpando caches antigos..." && \
     rm -rf /app/public/vite /app/public/packs /app/public/assets && \
-    pnpm install && \
+    rm -rf /app/node_modules/.vite /app/.vite && \
+    rm -rf /app/tmp/cache/* && \
+    echo "[BUILD] Instalando dependências..." && \
+    pnpm install --force && \
+    echo "[BUILD] Recompilando assets (isso pode levar alguns minutos)..." && \
     SECRET_KEY_BASE=placeholder RAILS_ENV=production NODE_ENV=production bundle exec rails assets:precompile && \
+    echo "[BUILD] Assets compilados com sucesso!" && \
+    ls -lh /app/public/vite/assets/ | grep dashboard | head -5 && \
     apk del curl bash && \
     rm -rf /root/.cache /root/.local
 
