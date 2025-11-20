@@ -14,14 +14,21 @@ module SdrIa
       end
 
       conversation = conversation_id ? Conversation.find_by(id: conversation_id) : contact.conversations.last
-
-      result = LeadQualifier.new(contact: contact, conversation: conversation).qualify!
-
-      if result[:success]
-        Rails.logger.info "[SDR IA Job] Qualificação bem-sucedida para contact #{contact_id}"
-      else
-        Rails.logger.warn "[SDR IA Job] Qualificação falhou: #{result[:reason] || result[:error]}"
+      unless conversation
+        Rails.logger.warn "[SDR IA Job] Nenhuma conversa encontrada para contact #{contact_id}"
+        return
       end
+
+      # Usar ConversationManager para fluxo conversacional
+      manager = ConversationManager.new(
+        contact: contact,
+        conversation: conversation,
+        account: contact.account
+      )
+
+      manager.process_message!
+
+      Rails.logger.info "[SDR IA Job] Mensagem processada com sucesso para contact #{contact_id}"
     rescue StandardError => e
       Rails.logger.error "[SDR IA Job] Erro inesperado: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")

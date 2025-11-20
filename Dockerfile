@@ -17,6 +17,9 @@ USER root
 # Copiar plugin SDR IA
 COPY plugins/sdr_ia /app/plugins/sdr_ia
 
+# Copiar ConversationManager
+COPY plugins/sdr_ia/app/services/conversation_manager.rb /app/plugins/sdr_ia/app/services/conversation_manager.rb
+
 # Copiar controllers
 COPY controllers/api/v1/accounts/sdr_ia /app/app/controllers/api/v1/accounts/sdr_ia
 
