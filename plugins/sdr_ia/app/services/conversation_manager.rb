@@ -179,8 +179,17 @@ module SdrIa
     end
 
     def send_message(content)
-      # Pega o primeiro usuário da conta como sender
-      sender = conversation.assignee || @account.users.first
+      # Tenta usar o agente padrão configurado (ex: Pedro Zoia)
+      default_agent_email = @config.dig('default_agent_email')
+      sender = nil
+
+      if default_agent_email.present?
+        sender = @account.users.find_by(email: default_agent_email)
+        Rails.logger.info "[SDR IA] Usando agente padrão: #{default_agent_email}" if sender
+      end
+
+      # Fallback: assignee ou primeiro usuário da conta
+      sender ||= conversation.assignee || @account.users.first
 
       message = conversation.messages.create!(
         account: @account,
@@ -190,7 +199,7 @@ module SdrIa
         sender: sender
       )
 
-      Rails.logger.info "[SDR IA] Mensagem enviada: #{content[0..50]}..."
+      Rails.logger.info "[SDR IA] Mensagem enviada por #{sender.email}: #{content[0..50]}..."
       message
     rescue StandardError => e
       Rails.logger.error "[SDR IA] Erro ao enviar mensagem: #{e.message}"

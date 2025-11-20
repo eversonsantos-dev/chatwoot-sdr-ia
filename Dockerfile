@@ -29,6 +29,7 @@ COPY models/sdr_ia_config.rb /app/app/models/sdr_ia_config.rb
 # Copiar migrations
 COPY db/migrate/20251120100414_create_sdr_ia_configs.rb /app/db/migrate/20251120100414_create_sdr_ia_configs.rb
 COPY db/migrate/20251120152500_add_prompts_to_sdr_ia_configs.rb /app/db/migrate/20251120152500_add_prompts_to_sdr_ia_configs.rb
+COPY db/migrate/20251120230000_add_default_agent_to_sdr_ia_configs.rb /app/db/migrate/20251120230000_add_default_agent_to_sdr_ia_configs.rb
 
 # Copiar initializer
 COPY config/initializers/sdr_ia.rb /app/config/initializers/sdr_ia.rb

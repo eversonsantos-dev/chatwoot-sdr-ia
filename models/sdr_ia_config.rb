@@ -16,6 +16,10 @@ class SdrIaConfig < ApplicationRecord
       'sdr_ia' => {
         'enabled' => enabled,
         'debug_mode' => debug_mode,
+        'default_agent_email' => default_agent_email,
+        'clinic_name' => clinic_name,
+        'ai_name' => ai_name,
+        'clinic_address' => clinic_address,
         'openai' => {
           'api_key' => openai_api_key,
           'model' => openai_model,
@@ -54,6 +58,10 @@ class SdrIaConfig < ApplicationRecord
     update(
       enabled: params.dig(:sdr_ia, :enabled),
       debug_mode: params.dig(:sdr_ia, :debug_mode),
+      default_agent_email: params.dig(:sdr_ia, :default_agent_email),
+      clinic_name: params.dig(:sdr_ia, :clinic_name),
+      ai_name: params.dig(:sdr_ia, :ai_name),
+      clinic_address: params.dig(:sdr_ia, :clinic_address),
       openai_api_key: params.dig(:sdr_ia, :openai, :api_key),
       openai_model: params.dig(:sdr_ia, :openai, :model),
       openai_max_tokens: params.dig(:sdr_ia, :openai, :max_tokens),
