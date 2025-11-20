@@ -103,7 +103,43 @@ O **SDR IA Module** é um plugin modular e não-invasivo para Chatwoot que autom
 
 ## 📦 Instalação
 
-### 1. Copiar Arquivos
+### Método 1: Script Automatizado ⭐ (Recomendado)
+
+**O jeito mais fácil e rápido!**
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/eversonsantos-dev/chatwoot-sdr-ia.git
+cd chatwoot-sdr-ia
+
+# 2. Execute o instalador
+./install.sh
+```
+
+**Pronto! ✅** O script automaticamente:
+- Detecta seu container Chatwoot
+- Faz backup dos arquivos existentes
+- Instala todos os componentes
+- Cria custom attributes e labels
+- Configura menu e rotas
+- Reinicia os serviços
+- Testa a instalação
+
+**Opções disponíveis:**
+```bash
+./install.sh --help                    # Ver todas as opções
+./install.sh --container <nome>        # Especificar container
+./install.sh --skip-backup             # Pular backup (não recomendado)
+```
+
+**Tempo total:** ~2 minutos
+
+### Método 2: Instalação Manual
+
+<details>
+<summary>Clique para ver instruções manuais</summary>
+
+#### 1. Copiar Arquivos
 
 ```bash
 # Copiar plugin para o Chatwoot
@@ -119,7 +155,7 @@ docker cp config_initializers_sdr_ia.rb <CONTAINER_ID>:/app/config/initializers/
 docker cp frontend/routes/dashboard/settings/sdr-ia <CONTAINER_ID>:/app/app/javascript/dashboard/routes/dashboard/settings/
 ```
 
-### 2. Executar Script de Instalação
+#### 2. Executar Script de Instalação
 
 ```bash
 docker exec <CONTAINER_ID> bundle exec rails runner /app/plugins/sdr_ia/install.rb
@@ -128,6 +164,8 @@ docker exec <CONTAINER_ID> bundle exec rails runner /app/plugins/sdr_ia/install.
 Este script cria:
 - 16 custom attributes no modelo Contact
 - 14 labels para categorização automática
+
+</details>
 
 ### 3. Configurar OpenAI API Key
 
@@ -291,21 +329,69 @@ O script verifica:
 - ✅ Labels criadas
 - ✅ Teste de qualificação com último contato
 
-## 🚀 Deploy
+## 🔄 Atualização
 
-### Atualizar Configurações
+### Script Automatizado ⭐
 
-Após modificar `settings.yml` ou `prompts.yml`:
+Quando houver uma nova versão disponível no GitHub:
 
 ```bash
-# Reiniciar apenas o app
-docker service update --force chatwoot_chatwoot_app
+# No diretório do projeto
+./update.sh
+```
 
-# Reiniciar Sidekiq também (se mudou jobs)
-docker service update --force chatwoot_chatwoot_sidekiq
+O script irá:
+- Verificar atualizações disponíveis
+- Mostrar o que mudou (changelog)
+- Fazer backup antes de atualizar
+- Baixar nova versão do GitHub
+- Atualizar arquivos no container
+- Reiniciar serviços
+
+**Opções:**
+```bash
+./update.sh --help                     # Ver opções
+./update.sh --skip-backup              # Pular backup
+./update.sh --no-restart               # Não reiniciar serviços
+```
+
+### Manual
+
+```bash
+cd chatwoot-sdr-ia
+git pull origin main
+# Copie os arquivos atualizados (mesmo processo da instalação)
+```
+
+## 🗑️ Desinstalação
+
+### Script Automatizado ⭐
+
+Para remover completamente o módulo:
+
+```bash
+./uninstall.sh
+```
+
+O script irá:
+- Fazer backup final
+- Remover todos os arquivos do módulo
+- Limpar configurações e menu
+- Remover custom attributes e labels
+- Reverter modificações no Chatwoot
+
+**ATENÇÃO:** Digite `REMOVER` para confirmar.
+
+**Opções:**
+```bash
+./uninstall.sh --help                  # Ver opções
+./uninstall.sh --keep-data             # Manter custom attributes e labels
+./uninstall.sh --force                 # Não pedir confirmação
 ```
 
 ### Desativar Temporariamente
+
+Se quiser apenas desabilitar sem remover:
 
 Edite `settings.yml`:
 
