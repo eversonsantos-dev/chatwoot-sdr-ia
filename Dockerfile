@@ -33,6 +33,9 @@ COPY config/initializers/sdr_ia.rb /app/config/initializers/sdr_ia.rb
 # Copiar routes.rb modificado com rotas do SDR IA
 COPY config/routes.rb /app/config/routes.rb
 
+# Copiar AsyncDispatcher modificado para incluir SDR IA Listener
+COPY patches/async_dispatcher.rb /app/app/dispatchers/async_dispatcher.rb
+
 # Criar diretórios necessários
 RUN mkdir -p /app/tmp/cache /app/tmp/pids
 

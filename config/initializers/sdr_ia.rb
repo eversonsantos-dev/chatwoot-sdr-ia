@@ -16,8 +16,7 @@ Rails.application.config.to_prepare do
 
     if SdrIa.enabled?
       begin
-        # Carregar classes necessárias ANTES de registrar o listener
-        Rails.logger.info "[SDR IA] Módulo habilitado. Registrando listener..."
+        Rails.logger.info "[SDR IA] Módulo habilitado. Carregando classes..."
 
         # Força o carregamento das classes do plugin
         require Rails.root.join('plugins/sdr_ia/app/services/openai_client')
@@ -25,24 +24,9 @@ Rails.application.config.to_prepare do
         require Rails.root.join('plugins/sdr_ia/app/jobs/qualify_lead_job')
         require Rails.root.join('plugins/sdr_ia/app/listeners/sdr_ia_listener')
 
-        # Agora que as classes estão carregadas, registra o listener
-        listener = SdrIa::Listener.instance
-        dispatcher = Rails.configuration.dispatcher
-
-        # Registra o listener no async dispatcher
-        async_dispatcher = dispatcher.instance_variable_get(:@async_dispatcher)
-        async_listeners = async_dispatcher.listeners
-
-        unless async_listeners.include?(listener)
-          async_listeners << listener
-          Rails.logger.info "[SDR IA] Listener registrado com sucesso"
-        else
-          Rails.logger.info "[SDR IA] Listener já estava registrado"
-        end
-
-        Rails.logger.info "[SDR IA] Classes carregadas. Listener pronto."
+        Rails.logger.info "[SDR IA] Classes carregadas. Listener será registrado pelo AsyncDispatcher."
       rescue StandardError => e
-        Rails.logger.error "[SDR IA] Erro ao carregar/registrar: #{e.message}"
+        Rails.logger.error "[SDR IA] Erro ao carregar classes: #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
       end
     else
