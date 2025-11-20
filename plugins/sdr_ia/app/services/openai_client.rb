@@ -5,11 +5,16 @@ require 'json'
 
 module SdrIa
   class OpenaiClient
-    def initialize
-      @api_key = ENV[SdrIa.config['openai']['api_key_env']]
-      @config = SdrIa.config
+    def initialize(account = nil)
+      @config = SdrIa.config(account)
 
-      raise Error, "OpenAI API Key não configurada" unless @api_key
+      # Tenta buscar a API key da config do banco primeiro
+      @api_key = @config.dig('openai', 'api_key')
+
+      # Fallback para ENV se não encontrar no banco
+      @api_key ||= ENV['OPENAI_API_KEY']
+
+      raise Error, "OpenAI API Key não configurada" unless @api_key&.present?
     end
 
     def analyze_conversation(conversation_history, system_prompt, analysis_prompt)

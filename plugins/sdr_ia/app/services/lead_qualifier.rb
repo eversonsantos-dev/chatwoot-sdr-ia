@@ -4,11 +4,14 @@ module SdrIa
   class LeadQualifier
     attr_reader :contact, :conversation
 
-    def initialize(contact:, conversation: nil)
+    def initialize(contact:, conversation: nil, account: nil)
       @contact = contact
       @conversation = conversation || contact.conversations.last
-      @config = SdrIa.config
-      @prompts = YAML.load_file(Rails.root.join('plugins/sdr_ia/config/prompts.yml'))['prompts']
+      @account = account || contact.account
+      @config = SdrIa.config(@account)
+
+      # Busca prompts da config do banco, fallback para YAML
+      @prompts = @config['prompts'] || load_prompts_from_yaml
     end
 
     def qualify!
@@ -56,7 +59,7 @@ module SdrIa
     def analyze_with_ai(messages)
       conversation_text = messages.join("\n")
 
-      client = OpenaiClient.new
+      client = OpenaiClient.new(@account)
       client.analyze_conversation(
         conversation_text,
         @prompts['system'],
@@ -127,6 +130,16 @@ module SdrIa
       Rails.logger.info "[SDR IA] Lead atribuído para time #{team_id}"
     rescue StandardError => e
       Rails.logger.error "[SDR IA] Erro ao atribuir time: #{e.message}"
+    end
+
+    def load_prompts_from_yaml
+      YAML.load_file(Rails.root.join('plugins/sdr_ia/config/prompts.yml'))['prompts']
+    rescue StandardError => e
+      Rails.logger.error "[SDR IA] Erro ao carregar prompts YAML: #{e.message}"
+      {
+        'system' => 'Você é um SDR virtual.',
+        'analysis' => 'Analise a conversa.'
+      }
     end
   end
 end

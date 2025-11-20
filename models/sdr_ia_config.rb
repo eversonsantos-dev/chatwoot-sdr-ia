@@ -22,6 +22,11 @@ class SdrIaConfig < ApplicationRecord
           'max_tokens' => openai_max_tokens,
           'temperature' => openai_temperature
         },
+        'prompts' => {
+          'system' => prompt_system,
+          'analysis' => prompt_analysis
+        },
+        'perguntas_etapas' => perguntas_etapas,
         'scoring' => {
           'weights' => scoring_weights.deep_symbolize_keys
         },
@@ -53,6 +58,9 @@ class SdrIaConfig < ApplicationRecord
       openai_model: params.dig(:sdr_ia, :openai, :model),
       openai_max_tokens: params.dig(:sdr_ia, :openai, :max_tokens),
       openai_temperature: params.dig(:sdr_ia, :openai, :temperature),
+      prompt_system: params.dig(:sdr_ia, :prompts, :system),
+      prompt_analysis: params.dig(:sdr_ia, :prompts, :analysis),
+      perguntas_etapas: params.dig(:sdr_ia, :perguntas_etapas),
       scoring_weights: params.dig(:sdr_ia, :scoring, :weights),
       threshold_quente: params.dig(:sdr_ia, :temperature_thresholds, :quente),
       threshold_morno: params.dig(:sdr_ia, :temperature_thresholds, :morno),
@@ -60,7 +68,9 @@ class SdrIaConfig < ApplicationRecord
       threshold_muito_frio: params.dig(:sdr_ia, :temperature_thresholds, :muito_frio),
       quente_team_id: params.dig(:sdr_ia, :teams, :quente_team_id),
       morno_team_id: params.dig(:sdr_ia, :teams, :morno_team_id),
-      procedimentos: params.dig(:sdr_ia, :procedimentos)
+      procedimentos: params.dig(:sdr_ia, :procedimentos),
+      max_tentativas_reconduzir: params.dig(:sdr_ia, :reconduzir, :max_tentativas),
+      delay_reconduzir_segundos: params.dig(:sdr_ia, :reconduzir, :delay_segundos)
     )
   end
 end
