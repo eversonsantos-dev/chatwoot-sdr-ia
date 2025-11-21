@@ -7,13 +7,58 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
-## [1.2.0] - 2025-11-20 🚀 PROMPT CONVERSACIONAL + AGENTE PADRÃO
+## [1.2.0] - 2025-11-20 🚀 IA CONVERSACIONAL COM OPENAI TEMPO REAL ✅ TESTADA E FUNCIONAL
+
+### 🎯 Status da Versão
+- ✅ **VERSÃO TOTALMENTE FUNCIONAL E TESTADA**
+- ✅ **IA CONVERSACIONAL 100% OPERACIONAL**
+- ✅ **RECOMENDADA PARA PRODUÇÃO**
+- 📅 **Data**: 20 de Novembro de 2025
+- 🔖 **Tag Git**: `v1.2.0`
+- 🐳 **Imagem Docker**: `localhost/chatwoot-sdr-ia:ddd9465`
+- 📦 **Commits**: `d6fd50e`, `de76ea7`, `ddd9465`
+
+### 🚨 ERROS ENCONTRADOS E CORREÇÕES APLICADAS
+
+Esta versão passou por 3 erros críticos durante desenvolvimento. **TODOS FORAM RESOLVIDOS** e documentados detalhadamente em `docs/TROUBLESHOOTING.md`.
+
+#### ❌ ERRO #1: Containers Rodando Imagem Antiga (RESOLVIDO ✅)
+- **Sintoma**: IA respondia de forma robótica mesmo após atualizar prompts
+- **Causa**: Containers executando imagem 542ffce (v1.1.2) ao invés de de76ea7 (v1.2.0)
+- **Solução**: Rebuild da imagem + update dos serviços Docker Swarm
+- **Tempo**: ~15 minutos
+- **Commit**: `de76ea7`
+
+#### ❌ ERRO #2: ConversationManagerV2 Class Not Found (RESOLVIDO ✅)
+- **Sintoma**: `uninitialized constant SdrIa::QualifyLeadJob::ConversationManagerV2`
+- **Causa**: Classe não sendo carregada no `config/initializers/sdr_ia.rb`
+- **Solução**: Adicionado `require` explícito da classe no initializer
+- **Tempo**: ~20 minutos
+- **Commit**: `ddd9465`
+
+#### ❌ ERRO #3: Database Columns Missing (RESOLVIDO ✅)
+- **Sintoma**: `undefined local variable or method 'default_agent_email'`
+- **Causa**: Migration 20251120230000 não havia sido executada
+- **Solução**: Executado `rails db:migrate` manualmente + restart do Sidekiq
+- **Tempo**: ~10 minutos
+- **Arquivos Afetados**: `models/sdr_ia_config.rb`, migration
+
+📚 **Documentação Completa**: Veja `docs/TROUBLESHOOTING.md` para análise técnica detalhada de cada erro.
 
 ### 🎯 Principais Mudanças
 
-Esta versão transforma o SDR IA de um bot mecânico em uma assistente conversacional natural e inteligente.
+Esta versão transforma o SDR IA de um bot mecânico em uma assistente conversacional natural e inteligente que usa OpenAI em **tempo real** para cada resposta.
 
 ### Added
+- 🤖 **ConversationManagerV2 - IA em Tempo Real**
+  - **NOVO SERVIÇO**: `plugins/sdr_ia/app/services/conversation_manager_v2.rb` (295 linhas)
+  - OpenAI gera resposta **a cada mensagem** do lead (não apenas no final)
+  - Método `generate_conversational_response()` chama OpenAI para resposta natural
+  - Histórico completo da conversa enviado para contexto da IA
+  - Qualificação automática após ~8 mensagens ou quando lead pede humano
+  - Método `should_qualify_now?()` detecta momento ideal de qualificação
+  - Método `qualify_lead()` analisa conversa completa e extrai informações
+
 - 🤖 **Prompt Conversacional Completo**
   - IA agora conversa de forma natural, não apenas faz perguntas mecânicas
   - Responde perguntas do lead antes de prosseguir com qualificação
@@ -21,6 +66,14 @@ Esta versão transforma o SDR IA de um bot mecânico em uma assistente conversac
   - Reconduze educadamente quando lead desvia (máximo 3 tentativas)
   - Mensagens curtas e diretas (2-4 linhas), com emojis moderados
   - Tom profissional, simpático e não robotizado
+
+- 🔌 **OpenaiClient Atualizado**
+  - **NOVO MÉTODO**: `generate_response(conversation_history, system_prompt)` em `openai_client.rb`
+  - Gera respostas conversacionais em tempo real usando GPT-4
+  - Recebe histórico completo da conversa como contexto
+  - Respostas limitadas a 500 tokens (mensagens curtas)
+  - Temperatura configurável para controle de criatividade
+  - Fallback para mensagem padrão em caso de erro
 
 - 👤 **Agente Padrão Configurável**
   - Novo campo `default_agent_email` em `sdr_ia_configs`
@@ -68,15 +121,20 @@ Esta versão transforma o SDR IA de um bot mecânico em uma assistente conversac
 ### Technical Details
 
 #### Arquivos Criados
+- `plugins/sdr_ia/app/services/conversation_manager_v2.rb` - **NOVO** Gerenciador conversacional (295 linhas)
 - `db/migrate/20251120230000_add_default_agent_to_sdr_ia_configs.rb` - Nova migration
 - `plugins/sdr_ia/config/prompts_new.yml` - Prompts conversacionais
+- `docs/TROUBLESHOOTING.md` - **NOVO** Documentação detalhada de erros e correções
 - `update_prompts.sh` - Script para atualizar prompts no banco
 - `UPGRADE_v1.2.0.md` - Guia completo de atualização
 
 #### Arquivos Modificados
+- `plugins/sdr_ia/app/services/openai_client.rb` - Adicionado método `generate_response()`
+- `plugins/sdr_ia/app/jobs/qualify_lead_job.rb` - Usa `ConversationManagerV2` ao invés de V1
+- `config/initializers/sdr_ia.rb` - Adicionado require de `conversation_manager_v2`
 - `models/sdr_ia_config.rb` - Adicionados 4 novos campos
 - `plugins/sdr_ia/app/services/conversation_manager.rb` - Lógica do agente padrão
-- `Dockerfile` - Incluída nova migration (linha 32)
+- `Dockerfile` - Copia conversation_manager_v2.rb e openai_client.rb atualizados
 
 #### Nova Migration (20251120230000)
 Adiciona 4 colunas em `sdr_ia_configs`:
