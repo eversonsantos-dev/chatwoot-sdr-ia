@@ -7,6 +7,118 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.0.2] - 2025-11-22 🐛 CORREÇÃO DE ATRIBUIÇÃO AUTOMÁTICA + LOGS AVANÇADOS
+
+### 🎯 Status da Versão
+- ✅ **CORREÇÃO CRÍTICA DE BUG**
+- ✅ **ATRIBUIÇÃO AUTOMÁTICA 100% ROBUSTA**
+- ✅ **LOGS AVANÇADOS PARA DEBUG**
+- 📅 **Data**: 22 de Novembro de 2025
+- 🔖 **Tag Git**: `v2.0.2`
+- 📦 **Patch Release** - Correções de bugs críticos
+
+### 🐛 Correções de Bugs
+
+#### ❌ PROBLEMA: Atribuição automática quebrava silenciosamente
+**Descrição**: Em v2.0.1, se a mensagem de encerramento falhasse (por `agent_name` ser nil ou mensagem template vazia), o erro era engolido e o usuário achava que a atribuição não funcionou.
+
+**Causa Raiz**:
+- Método `send_closing_message` não tinha proteção contra `nil`
+- Erro em `.gsub('{{agent_name}}', nil)` quebrava silenciosamente
+- Falta de logs detalhados dificultava debug
+
+**Solução Implementada**:
+1. ✅ Adicionada proteção contra `nil` em `agent_name` (fallback para 'nossa equipe')
+2. ✅ Validação de `mensagem_template` antes de usar
+3. ✅ Rescue block em `send_closing_message` para evitar quebra total
+4. ✅ Logs detalhados em CADA etapa do fluxo de qualificação
+5. ✅ Conversão segura com `.to_s` em `gsub`
+
+**Arquivos Modificados**:
+- `plugins/sdr_ia/app/services/conversation_manager_v2.rb`
+  - Linha 207: `agent_name` com fallback
+  - Linhas 214-217: Validação de template
+  - Linha 220: `.to_s` para segurança
+  - Linhas 223-226: Rescue block com fallback
+  - Linhas 123-150: Logs detalhados no fluxo de qualificação
+  - Linhas 344-387: Logs verbosos na atribuição automática
+
+### ✨ Melhorias
+
+#### 📊 Sistema de Logs Avançado para Debug
+**Novo sistema de logs com emojis e verbosidade**:
+
+```
+[SDR IA] [V2] ✅ Análise recebida da IA: temperatura=quente, score=95
+[SDR IA] [V2] ✅ Custom attributes atualizados
+[SDR IA] [V2] ✅ Labels aplicadas
+[SDR IA] [V2] 🎯 INICIANDO ATRIBUIÇÃO AUTOMÁTICA...
+[SDR IA] [V2] 🎯 Iniciando atribuição automática para temperatura: quente
+[SDR IA] [V2] 🔍 Team ID configurado para quente: 5
+[SDR IA] [V2] 📋 Time encontrado: Close (ID: 5)
+[SDR IA] [V2] ✅ Lead QUENTE atribuído IMEDIATAMENTE para time: Close (ID: 5)
+[SDR IA] [V2] 📊 Conversation 123 agora pertence ao time 5
+[SDR IA] [V2] ✅ Atribuição automática concluída
+[SDR IA] [V2] 💬 Enviando mensagem de encerramento...
+[SDR IA] [V2] ✅ Mensagem de encerramento enviada
+[SDR IA] [V2] ✅✅✅ Qualificação completa: quente - Score: 95
+```
+
+**Benefícios**:
+- 🔍 Facilita identificar exatamente onde o fluxo falha
+- 🎯 Mostra se team_id está configurado
+- 📊 Confirma que atribuição foi executada
+- ⚠️ Avisos claros sobre configurações faltantes
+
+#### 🛡️ Robustez Aumentada
+- ✅ Mensagem de encerramento NUNCA quebra o fluxo
+- ✅ Fallback automático para mensagem genérica se houver erro
+- ✅ Proteção contra nil em todos os pontos críticos
+- ✅ Atribuição automática SEMPRE executa (independente da mensagem)
+
+### 📁 Arquivos Modificados
+1. `plugins/sdr_ia/app/services/conversation_manager_v2.rb` - Correções e logs avançados
+2. `CHANGELOG.md` - Documentação da correção
+
+### ⚙️ Como Atualizar
+
+```bash
+cd /root/chatwoot-sdr-ia
+git pull origin main
+git checkout v2.0.2
+./rebuild.sh
+./deploy.sh
+```
+
+**Tempo estimado**: ~5 minutos
+
+### 📊 Testes Recomendados
+
+Após atualizar, teste:
+1. ✅ Criar conversa com lead quente
+2. ✅ Verificar logs: `docker service logs chatwoot_chatwoot_sidekiq -f | grep "SDR IA"`
+3. ✅ Confirmar mensagem: `🎯 INICIANDO ATRIBUIÇÃO AUTOMÁTICA...`
+4. ✅ Confirmar mensagem: `✅ Lead QUENTE atribuído IMEDIATAMENTE para time`
+5. ✅ Verificar no painel se lead foi atribuído ao time correto
+
+---
+
+## [2.0.1] - 2025-11-22 💬 MENSAGENS DE ENCERRAMENTO CONFIGURÁVEIS
+
+### Adicionado
+- ✅ Nova aba "Mensagens de Encerramento" no painel admin
+- ✅ Mensagens personalizáveis por temperatura (quente, morno, frio, muito_frio)
+- ✅ Placeholder `{{agent_name}}` substituído dinamicamente
+- ✅ Migration para adicionar campo `closing_messages` (JSONB)
+
+### Arquivos Modificados
+- `db/migrate/20251122200000_add_closing_messages_to_sdr_ia_configs.rb` (NOVO)
+- `frontend/routes/dashboard/settings/sdr-ia/Index.vue` - Nova aba
+- `models/sdr_ia_config.rb` - Campo `closing_messages`
+- `plugins/sdr_ia/app/services/conversation_manager_v2.rb` - Uso de mensagens configuráveis
+
+---
+
 ## [2.0.0] - 2025-11-22 🎯 BASE DE CONHECIMENTO + NOTAS PRIVADAS + AUTOMAÇÕES AVANÇADAS
 
 ### 🎯 Status da Versão

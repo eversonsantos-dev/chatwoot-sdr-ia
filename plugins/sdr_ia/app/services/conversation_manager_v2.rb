@@ -120,22 +120,32 @@ module SdrIa
       )
 
       if analysis
+        Rails.logger.info "[SDR IA] [V2] ✅ Análise recebida da IA: temperatura=#{analysis['temperatura']}, score=#{analysis['score']}"
+
         # Atualizar contact com análise
         update_contact_with_analysis(analysis)
+        Rails.logger.info "[SDR IA] [V2] ✅ Custom attributes atualizados"
 
         # Aplicar labels ANTES de enviar mensagem
-        apply_labels(analysis['tags_sugeridas']) if analysis['tags_sugeridas']
+        if analysis['tags_sugeridas']
+          apply_labels(analysis['tags_sugeridas'])
+          Rails.logger.info "[SDR IA] [V2] ✅ Labels aplicadas"
+        end
 
         # ATRIBUIR TIME IMEDIATAMENTE (antes da mensagem)
         # Para leads QUENTES e MORNOS, garantir atribuição automática
+        Rails.logger.info "[SDR IA] [V2] 🎯 INICIANDO ATRIBUIÇÃO AUTOMÁTICA..."
         assign_to_team(analysis)
+        Rails.logger.info "[SDR IA] [V2] ✅ Atribuição automática concluída"
 
         # Enviar mensagem de encerramento (DEPOIS da atribuição)
+        Rails.logger.info "[SDR IA] [V2] 💬 Enviando mensagem de encerramento..."
         send_closing_message(analysis)
+        Rails.logger.info "[SDR IA] [V2] ✅ Mensagem de encerramento enviada"
 
-        Rails.logger.info "[SDR IA] [V2] Qualificação completa: #{analysis['temperatura']} - Score: #{analysis['score']}"
+        Rails.logger.info "[SDR IA] [V2] ✅✅✅ Qualificação completa: #{analysis['temperatura']} - Score: #{analysis['score']}"
       else
-        Rails.logger.error "[SDR IA] [V2] Falha na análise da IA"
+        Rails.logger.error "[SDR IA] [V2] ❌ Falha na análise da IA - Análise retornou nil"
         send_message("Obrigado pelas informações! Nossa equipe entrará em contato em breve.")
       end
     end
@@ -204,16 +214,26 @@ module SdrIa
 
     def send_closing_message(analysis)
       temperatura = analysis['temperatura']
-      agent_name = get_agent_name
+      agent_name = get_agent_name || 'nossa equipe'
 
       # Buscar mensagem configurável do banco, com fallback para mensagens padrão
       closing_messages = @config.dig('closing_messages') || {}
       mensagem_template = closing_messages[temperatura] || get_default_closing_message(temperatura)
 
+      # Garantir que mensagem_template não é nil
+      if mensagem_template.nil? || mensagem_template.empty?
+        Rails.logger.error "[SDR IA] [V2] Mensagem template vazia para temperatura: #{temperatura}"
+        mensagem_template = "Obrigado pelas informações! Nossa equipe entrará em contato em breve."
+      end
+
       # Substituir placeholder {{agent_name}} pelo nome real do agente
-      mensagem = mensagem_template.gsub('{{agent_name}}', agent_name)
+      mensagem = mensagem_template.gsub('{{agent_name}}', agent_name.to_s)
 
       send_message(mensagem)
+    rescue StandardError => e
+      Rails.logger.error "[SDR IA] [V2] Erro ao enviar mensagem de encerramento: #{e.message}"
+      # Tentar enviar mensagem genérica
+      send_message("Obrigado pelas informações! Nossa equipe entrará em contato em breve.") rescue nil
     end
 
     def get_default_closing_message(temperatura)
@@ -333,9 +353,13 @@ module SdrIa
 
     def assign_to_team(analysis)
       temperatura = analysis['temperatura']
+      Rails.logger.info "[SDR IA] [V2] 🎯 Iniciando atribuição automática para temperatura: #{temperatura}"
 
       # REGRA UNIVERSAL: Leads QUENTES e MORNOS SEMPRE são atribuídos automaticamente
-      return unless ['quente', 'morno'].include?(temperatura)
+      unless ['quente', 'morno'].include?(temperatura)
+        Rails.logger.info "[SDR IA] [V2] ⏭️ Lead #{temperatura} não requer atribuição automática"
+        return
+      end
 
       team_id = case temperatura
                 when 'quente'
@@ -344,27 +368,32 @@ module SdrIa
                   @config.dig('teams', 'morno_team_id')
                 end
 
+      Rails.logger.info "[SDR IA] [V2] 🔍 Team ID configurado para #{temperatura}: #{team_id || 'NÃO CONFIGURADO'}"
+
       if team_id.nil?
-        Rails.logger.warn "[SDR IA] [V2] Team ID não configurado para temperatura: #{temperatura}"
+        Rails.logger.warn "[SDR IA] [V2] ⚠️ Team ID não configurado para temperatura: #{temperatura}. Configure em Configurações → SDR IA → Atribuição Automática"
         return
       end
 
       team = Team.find_by(id: team_id)
       unless team
-        Rails.logger.error "[SDR IA] [V2] Team não encontrado: ID #{team_id}"
+        Rails.logger.error "[SDR IA] [V2] ❌ Team não encontrado com ID #{team_id}. Verifique se o time existe na conta."
         return
       end
+
+      Rails.logger.info "[SDR IA] [V2] 📋 Time encontrado: #{team.name} (ID: #{team_id})"
 
       # Atribuir conversa ao time
       conversation.update!(team_id: team_id)
       Rails.logger.info "[SDR IA] [V2] ✅ Lead #{temperatura.upcase} atribuído IMEDIATAMENTE para time: #{team.name} (ID: #{team_id})"
+      Rails.logger.info "[SDR IA] [V2] 📊 Conversation #{conversation.id} agora pertence ao time #{team_id}"
 
       # MELHORIA 03: Criar nota privada para o closer
       create_private_note_for_closer(analysis)
 
     rescue StandardError => e
-      Rails.logger.error "[SDR IA] [V2] Erro ao atribuir time: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n") if e.backtrace
+      Rails.logger.error "[SDR IA] [V2] ❌ ERRO CRÍTICO ao atribuir time: #{e.message}"
+      Rails.logger.error "[SDR IA] [V2] Backtrace: #{e.backtrace.join("\n")}" if e.backtrace
     end
 
     # MELHORIA 04: Determinar estágio do funil
