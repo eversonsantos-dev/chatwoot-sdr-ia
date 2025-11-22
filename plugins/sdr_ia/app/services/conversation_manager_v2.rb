@@ -156,7 +156,13 @@ module SdrIa
         assign_to_team(analysis)
 
         # Enviar mensagem de encerramento (DEPOIS da atribuição)
-        send_closing_message(analysis)
+        # EXCETO para leads QUENTES - a IA conversacional já enviou a mensagem adequada
+        unless analysis['temperatura'] == 'quente'
+          send_closing_message(analysis)
+          Rails.logger.info "[SDR IA] [V2] Mensagem de encerramento enviada: #{analysis['temperatura']}"
+        else
+          Rails.logger.info "[SDR IA] [V2] Lead QUENTE - pulando mensagem de encerramento (já enviada pela IA conversacional)"
+        end
 
         Rails.logger.info "[SDR IA] [V2] Qualificação completa: #{analysis['temperatura']} - Score: #{analysis['score']}"
       else
