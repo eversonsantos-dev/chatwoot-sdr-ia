@@ -7,6 +7,90 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.0.0-patch4] - 2025-11-22 🎯 LEADS QUENTES SEM MENSAGEM REDUNDANTE
+
+### 🎯 Status da Versão
+- ✅ **MELHORIA DE UX - EXPERIÊNCIA PERFEITA**
+- ✅ **LEADS QUENTES NÃO RECEBEM MENSAGEM ADICIONAL**
+- ✅ **RECOMENDADA PARA PRODUÇÃO**
+- 📅 **Data**: 22 de Novembro de 2025
+- 🔖 **Tag Git**: `v2.0.0-patch4`
+- 📦 **Commit**: `2e7b8a9`
+
+### 🐛 Bug Fixed
+
+#### ❌ PROBLEMA: Mensagem Redundante para Leads Quentes
+**Sintoma:** Leads QUENTES recebiam mensagem de fechamento mesmo após a IA conversacional já ter enviado a mensagem perfeita.
+
+**Exemplo:**
+```
+IA: Perfeito! Vejo que você tem grande interesse 🎯
+    Vou te conectar AGORA com Pedro Zoia... (da IA conversacional)
+
+IA: Perfeito! Vejo que você tem grande interesse 🎯
+    Vou te conectar AGORA com Pedro Zoia... (do send_closing_message) ← REDUNDANTE
+```
+
+**Diferença do Patch3:**
+- **Patch3:** Corrigiu duplicação geral (IA conversacional + closing message)
+- **Patch4:** Corrige caso específico de leads QUENTES que já receberam mensagem adequada
+
+**Solução Implementada:**
+- ✅ `send_closing_message()` agora **pula** leads QUENTES
+- ✅ IA conversacional já enviou a mensagem perfeita
+- ✅ Apenas leads MORNO/FRIO/MUITO_FRIO recebem mensagem de `send_closing_message()`
+
+**Arquivo:** `plugins/sdr_ia/app/services/conversation_manager_v2.rb`
+**Linhas:** 154-167
+
+```ruby
+# ANTES (enviava para TODOS):
+send_closing_message(analysis)
+
+# DEPOIS (pula QUENTES):
+unless analysis['temperatura'] == 'quente'
+  send_closing_message(analysis)
+else
+  Rails.logger.info "[SDR IA] [V2] Lead QUENTE - pulando mensagem de encerramento"
+end
+```
+
+### 📊 Comportamento por Temperatura
+
+| Temperatura | Mensagem IA Conversacional | send_closing_message | Total |
+|-------------|---------------------------|----------------------|-------|
+| 🔴 QUENTE | ✅ Sim | ❌ Não (pulada) | **1** ✅ |
+| 🟡 MORNO | ✅ Sim | ❌ Não (patch3) | **1** ✅ |
+| 🔵 FRIO | ❌ Não | ✅ Sim | **1** ✅ |
+| ⚫ MUITO FRIO | ❌ Não | ✅ Sim | **1** ✅ |
+
+### 🎯 Benefícios
+- ✅ **Experiência perfeita** - Leads quentes sem mensagens redundantes
+- ✅ **Profissionalismo** - IA parece mais humana
+- ✅ **Economia** - Menos mensagens via WhatsApp API
+- ✅ **Conversão** - Lead não fica confuso
+
+### 📝 Arquivos Modificados
+1. `plugins/sdr_ia/app/services/conversation_manager_v2.rb` - Condicional adicionada (linha 160)
+2. `PATCH_v2.0.0-patch4.md` - Documentação completa do patch (NOVO)
+3. `CHANGELOG.md` - Este arquivo atualizado
+
+### ⚠️ Breaking Changes
+Nenhuma! Esta correção é **100% compatível** com v2.0.0-patch3.
+
+### 🚀 Deploy
+```bash
+cd /root/chatwoot-sdr-ia
+git pull origin main
+./rebuild.sh
+./deploy.sh
+```
+
+### 📚 Documentação
+- `PATCH_v2.0.0-patch4.md` - Análise técnica completa + testes
+
+---
+
 ## [2.0.0-patch3] - 2025-11-22 🐛 CORREÇÃO MENSAGEM DUPLICADA
 
 ### 🎯 Status da Versão
