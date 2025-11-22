@@ -235,9 +235,11 @@ module SdrIa
                    "Vou te conectar AGORA com #{agent_name}, nosso especialista em SDR. " \
                    "Ele vai te ajudar a agendar sua avaliação! 😊"
                  when 'morno'
-                   "Ótimo! Entendi suas necessidades 😊\n" \
-                   "Vou te enviar nosso portfólio com resultados reais e tabela de valores.\n" \
-                   "#{agent_name} vai entrar em contato em até 2 horas para tirar suas dúvidas. Tudo bem?"
+                   contact_name = analysis['nome'] || 'você'
+                   "Ótimo, #{contact_name}! Já temos todas as informações necessárias. 😊\n" \
+                   "Agradeço muito pelo seu interesse e pelas informações.\n" \
+                   "Vamos encaminhar seu contato para nosso especialista, que entrará em contato em breve para dar continuidade.\n" \
+                   "Se tiver mais alguma dúvida ou precisar de algo, estamos à disposição!"
                  when 'frio'
                    "Entendi que você está no início da pesquisa! 💙\n" \
                    "Vou te adicionar em nosso grupo de conteúdos e promoções.\n" \
