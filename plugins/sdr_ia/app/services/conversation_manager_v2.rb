@@ -89,13 +89,16 @@ module SdrIa
       response = client.generate_response(history, system_prompt)
 
       if response.present?
-        send_message(response)
-        Rails.logger.info "[SDR IA] [V2] Resposta conversacional enviada"
-
-        # GATILHO: Se a mensagem indica encerramento, qualificar e atribuir automaticamente
+        # GATILHO: Se a mensagem indica encerramento, NÃO enviar aqui
+        # A mensagem será enviada pelo send_closing_message após qualificação
         if response_indicates_handoff?(response)
           Rails.logger.info "[SDR IA] [V2] Mensagem de encerramento detectada! Iniciando qualificação automática..."
+          Rails.logger.info "[SDR IA] [V2] Pulando envio da resposta conversacional (será enviada após qualificação)"
           qualify_lead(history)
+        else
+          # Apenas envia se NÃO for mensagem de encerramento
+          send_message(response)
+          Rails.logger.info "[SDR IA] [V2] Resposta conversacional enviada"
         end
       else
         Rails.logger.error "[SDR IA] [V2] Falha ao gerar resposta, usando fallback"
