@@ -31,7 +31,8 @@ custom_attrs = [
   { key: 'sdr_ia_proximo_passo', name: 'SDR IA - Próximo Passo', type: 'text' },
   { key: 'sdr_ia_tentativas', name: 'SDR IA - Tentativas JSON', type: 'text' },
   { key: 'sdr_ia_iniciado_em', name: 'SDR IA - Iniciado em', type: 'text' },
-  { key: 'sdr_ia_qualificado_em', name: 'SDR IA - Qualificado em', type: 'text' }
+  { key: 'sdr_ia_qualificado_em', name: 'SDR IA - Qualificado em', type: 'text' },
+  { key: 'estagio_funil', name: 'Estágio do Funil', type: 'list', values: ['Novo Lead', 'Contato Inicial', 'Lead Qualificado', 'Em Negociação', 'Pagamento Pendente', 'Fechado', 'Lead Esfriou', 'Lead Desqualificado'] }
 ]
 
 custom_attrs.each do |attr|

@@ -123,12 +123,15 @@ module SdrIa
         # Atualizar contact com análise
         update_contact_with_analysis(analysis)
 
-        # Enviar mensagem de encerramento
-        send_closing_message(analysis)
-
-        # Aplicar labels e atribuir time se necessário
+        # Aplicar labels ANTES de enviar mensagem
         apply_labels(analysis['tags_sugeridas']) if analysis['tags_sugeridas']
-        assign_to_team(analysis) if should_assign_to_team?(analysis)
+
+        # ATRIBUIR TIME IMEDIATAMENTE (antes da mensagem)
+        # Para leads QUENTES e MORNOS, garantir atribuição automática
+        assign_to_team(analysis)
+
+        # Enviar mensagem de encerramento (DEPOIS da atribuição)
+        send_closing_message(analysis)
 
         Rails.logger.info "[SDR IA] [V2] Qualificação completa: #{analysis['temperatura']} - Score: #{analysis['score']}"
       else
@@ -138,8 +141,16 @@ module SdrIa
     end
 
     def get_conversational_system_prompt
-      # Usar prompt do banco ou fallback para o novo prompt conversacional
-      @config.dig('prompts', 'system') || read_prompts_from_file['system']
+      base_prompt = @config.dig('prompts', 'system') || read_prompts_from_file['system']
+
+      # Adicionar base de conhecimento ao prompt se configurado
+      knowledge_base = @config.dig('knowledge_base')
+      if knowledge_base.present?
+        base_prompt += "\n\n# BASE DE CONHECIMENTO DA EMPRESA\n\n#{knowledge_base}\n\n" \
+                      "Use essas informações para responder perguntas do lead sobre a clínica."
+      end
+
+      base_prompt
     end
 
     def get_fallback_system_prompt
@@ -164,10 +175,16 @@ module SdrIa
     end
 
     def update_contact_with_analysis(analysis)
+      temperatura = analysis['temperatura']
+      score = analysis['score']
+
+      # Determinar estágio do funil baseado em temperatura e score
+      estagio_funil = determine_funnel_stage(temperatura, score)
+
       contact.custom_attributes.merge!({
         'sdr_ia_status' => 'qualificado',
-        'sdr_ia_temperatura' => analysis['temperatura'],
-        'sdr_ia_score' => analysis['score'],
+        'sdr_ia_temperatura' => temperatura,
+        'sdr_ia_score' => score,
         'sdr_ia_nome' => analysis['nome'],
         'sdr_ia_interesse' => analysis['interesse'],
         'sdr_ia_urgencia' => analysis['urgencia'],
@@ -177,11 +194,12 @@ module SdrIa
         'sdr_ia_comportamento' => analysis['comportamento'],
         'sdr_ia_resumo' => analysis['resumo'],
         'sdr_ia_proximo_passo' => analysis['proximo_passo'],
-        'sdr_ia_qualificado_em' => Time.current.iso8601
+        'sdr_ia_qualificado_em' => Time.current.iso8601,
+        'estagio_funil' => estagio_funil  # MELHORIA 04: Estágio do Funil
       })
 
       contact.save!
-      Rails.logger.info "[SDR IA] [V2] Contact #{contact.id} qualificado com sucesso"
+      Rails.logger.info "[SDR IA] [V2] Contact #{contact.id} qualificado: #{estagio_funil} (#{temperatura} - #{score}pts)"
     end
 
     def send_closing_message(analysis)
@@ -254,41 +272,168 @@ module SdrIa
     def apply_labels(tag_names)
       return unless tag_names.is_a?(Array)
 
+      labels_aplicadas = []
+
       tag_names.each do |tag_name|
         label = @account.labels.find_by(title: tag_name)
+
+        unless label
+          Rails.logger.warn "[SDR IA] [V2] Label '#{tag_name}' não encontrada, tentando criar..."
+          label = create_label_if_needed(tag_name)
+        end
+
         next unless label
 
         unless contact.labels.include?(label)
           contact.labels << label
-          Rails.logger.info "[SDR IA] [V2] Label '#{tag_name}' aplicada"
+          labels_aplicadas << tag_name
         end
       end
+
+      Rails.logger.info "[SDR IA] [V2] Labels aplicadas: #{labels_aplicadas.join(', ')}" if labels_aplicadas.any?
+
     rescue StandardError => e
       Rails.logger.error "[SDR IA] [V2] Erro ao aplicar labels: #{e.message}"
     end
 
-    def should_assign_to_team?(analysis)
-      ['quente', 'morno'].include?(analysis['temperatura']) &&
-        ['transferir_closer', 'agendar_followup'].include?(analysis['proximo_passo'])
+    # MELHORIA 04: Criar label automaticamente se não existir
+    def create_label_if_needed(tag_name)
+      # Definir cor baseada no tipo de label
+      color = case tag_name
+              when /temperatura-quente/
+                '#FF0000'  # Vermelho
+              when /temperatura-morno/
+                '#FFA500'  # Laranja
+              when /temperatura-frio/
+                '#0000FF'  # Azul
+              when /temperatura-muito_frio/
+                '#808080'  # Cinza
+              when /procedimento-/
+                '#9C27B0'  # Roxo
+              when /urgencia-/
+                '#FF9800'  # Laranja escuro
+              when /comportamento-/
+                '#4CAF50'  # Verde
+              else
+                '#000000'  # Preto (padrão)
+              end
+
+      @account.labels.create!(
+        title: tag_name,
+        description: "Criada automaticamente pelo SDR IA",
+        color: color
+      )
+
+      Rails.logger.info "[SDR IA] [V2] Label '#{tag_name}' criada automaticamente"
+
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.error "[SDR IA] [V2] Erro ao criar label '#{tag_name}': #{e.message}"
+      nil
     end
 
     def assign_to_team(analysis)
-      team_id = case analysis['temperatura']
+      temperatura = analysis['temperatura']
+
+      # REGRA UNIVERSAL: Leads QUENTES e MORNOS SEMPRE são atribuídos automaticamente
+      return unless ['quente', 'morno'].include?(temperatura)
+
+      team_id = case temperatura
                 when 'quente'
                   @config.dig('teams', 'quente_team_id')
                 when 'morno'
                   @config.dig('teams', 'morno_team_id')
                 end
 
-      return unless team_id
+      if team_id.nil?
+        Rails.logger.warn "[SDR IA] [V2] Team ID não configurado para temperatura: #{temperatura}"
+        return
+      end
 
       team = Team.find_by(id: team_id)
-      return unless team
+      unless team
+        Rails.logger.error "[SDR IA] [V2] Team não encontrado: ID #{team_id}"
+        return
+      end
 
+      # Atribuir conversa ao time
       conversation.update!(team_id: team_id)
-      Rails.logger.info "[SDR IA] [V2] Lead atribuído para time #{team.name}"
+      Rails.logger.info "[SDR IA] [V2] ✅ Lead #{temperatura.upcase} atribuído IMEDIATAMENTE para time: #{team.name} (ID: #{team_id})"
+
+      # MELHORIA 03: Criar nota privada para o closer
+      create_private_note_for_closer(analysis)
+
     rescue StandardError => e
       Rails.logger.error "[SDR IA] [V2] Erro ao atribuir time: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n") if e.backtrace
+    end
+
+    # MELHORIA 04: Determinar estágio do funil
+    def determine_funnel_stage(temperatura, score)
+      return 'Lead Desqualificado' if temperatura == 'muito_frio' || score < 20
+
+      case temperatura
+      when 'quente'
+        'Lead Qualificado'  # Alta prioridade, pronto para closer
+      when 'morno'
+        'Lead Qualificado'  # Média prioridade, mas ainda qualificado
+      when 'frio'
+        'Contato Inicial'   # Baixa prioridade, precisa nutrição
+      else
+        'Novo Lead'
+      end
+    end
+
+    # MELHORIA 03: Criar nota privada automática para o closer
+    def create_private_note_for_closer(analysis)
+      temperatura_emoji = {
+        'quente' => '🔴',
+        'morno' => '🟡',
+        'frio' => '🔵',
+        'muito_frio' => '⚫'
+      }[analysis['temperatura']] || '⚪'
+
+      nota_content = <<~NOTA
+        #{temperatura_emoji} **QUALIFICAÇÃO AUTOMÁTICA SDR IA**
+
+        📊 **Score:** #{analysis['score']}/130 pontos
+        🌡️ **Temperatura:** #{analysis['temperatura'].upcase}
+        🎯 **Estágio:** #{determine_funnel_stage(analysis['temperatura'], analysis['score'])}
+
+        👤 **Nome:** #{analysis['nome'] || 'Não informado'}
+        💎 **Interesse:** #{analysis['interesse'] || 'Não especificado'}
+        ⏰ **Urgência:** #{analysis['urgencia']&.humanize || 'Não informada'}
+        📍 **Localização:** #{analysis['localizacao'] || 'Não informada'}
+
+        💡 **Motivação:** #{analysis['motivacao'] || 'Não identificada'}
+        📚 **Conhecimento:** #{analysis['conhecimento']&.humanize || 'Não avaliado'}
+        🎭 **Comportamento:** #{analysis['comportamento']&.humanize || 'Normal'}
+
+        📝 **RESUMO PARA CLOSER:**
+        #{analysis['resumo']}
+
+        🎯 **PRÓXIMO PASSO RECOMENDADO:**
+        #{analysis['proximo_passo']&.humanize || 'Avaliar contexto'}
+
+        ⏱️ **Qualificado em:** #{Time.current.strftime('%d/%m/%Y às %H:%M')}
+
+        ---
+        _Nota gerada automaticamente pelo SDR IA v1.3.0_
+      NOTA
+
+      # Criar a nota privada (visible only to agents)
+      conversation.messages.create!(
+        account: @account,
+        inbox: conversation.inbox,
+        message_type: :activity,
+        content: nota_content,
+        private: true,  # Nota privada - lead não vê
+        sender: conversation.assignee || @account.users.first
+      )
+
+      Rails.logger.info "[SDR IA] [V2] ✅ Nota privada criada para closer com resumo da qualificação"
+
+    rescue StandardError => e
+      Rails.logger.error "[SDR IA] [V2] Erro ao criar nota privada: #{e.message}"
     end
   end
 end

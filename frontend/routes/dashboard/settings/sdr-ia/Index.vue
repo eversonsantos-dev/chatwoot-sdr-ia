@@ -27,6 +27,7 @@ const settings = ref({
   sdr_ia: {
     enabled: true,
     debug_mode: false,
+    knowledge_base: '',
     openai: {
       api_key: '',
       model: 'gpt-4-turbo-preview',
@@ -88,6 +89,7 @@ const newProcedimento = ref('');
 // Tab management
 const tabs = [
   { id: 'general', label: 'Configurações Gerais', icon: '⚙️' },
+  { id: 'knowledge', label: 'Base de Conhecimento', icon: '📚' },
   { id: 'prompts', label: 'Prompts da IA', icon: '🤖' },
   { id: 'questions', label: 'Perguntas por Etapa', icon: '❓' },
   { id: 'scoring', label: 'Sistema de Scoring', icon: '📊' }
@@ -518,6 +520,117 @@ onMounted(() => {
                     ×
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Base de Conhecimento -->
+      <div v-show="activeTab === 'knowledge'" class="space-y-6">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+            📚 Base de Conhecimento da Empresa
+          </h3>
+
+          <div class="space-y-4">
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+              <div class="flex items-start">
+                <div class="mr-3 text-2xl">💡</div>
+                <div>
+                  <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                    Para que serve?
+                  </h4>
+                  <p class="text-sm text-blue-800 dark:text-blue-200">
+                    Adicione informações universais sobre sua empresa que a IA deve conhecer para responder
+                    perguntas dos leads de forma precisa e consistente.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                📝 Informações da Empresa
+              </label>
+              <textarea
+                v-model="settings.sdr_ia.knowledge_base"
+                rows="20"
+                placeholder="Exemplo:
+
+🏥 SOBRE A CLÍNICA
+- Nome: Nexus Atemporal
+- Endereço: Av. Paulista, 1000 - São Paulo/SP
+- Horário: Segunda a Sexta 9h-18h, Sábado 9h-14h
+- Telefone: (11) 98765-4321
+- Instagram: @nexusatemporal
+
+💰 VALORES E CONDIÇÕES
+- Harmonização Facial: R$ 1.500 a R$ 3.000 (varia conforme área)
+- Botox: R$ 800 a R$ 1.500 (conforme unidades)
+- Preenchimento Labial: R$ 1.200 a R$ 2.500
+- Formas de pagamento: Cartão (até 12x), PIX (5% desconto), Dinheiro
+- Consulta inicial: GRATUITA
+
+🎯 PROCEDIMENTOS OFERECIDOS
+- Harmonização Facial Completa
+- Botox (testa, olhos, rugas)
+- Preenchimento Labial e Facial
+- Bioestimuladores de Colágeno
+- Skinbooster e Hidratação Profunda
+- Fios de PDO para Lifting
+- Peeling e Tratamentos de Pele
+
+👨‍⚕️ EQUIPE
+- Dra. Maria Silva - CRM 12345 - Especialista em Harmonização
+- Dr. João Santos - CRM 67890 - Especialista em Procedimentos Injetáveis
+- Enfermeira Ana Costa - COREN 11111 - Procedimentos Estéticos
+
+📋 PROCESSO DE ATENDIMENTO
+1. Consulta inicial gratuita (30min)
+2. Avaliação personalizada
+3. Orçamento detalhado
+4. Agendamento do procedimento
+5. Acompanhamento pós-procedimento
+
+⭐ DIFERENCIAIS
+- Clínica certificada pela ANVISA
+- Produtos importados e aprovados
+- Protocolos de segurança rigorosos
+- Garantia de satisfação
+- Mais de 5.000 procedimentos realizados
+
+🚫 CONTRAINDICAÇÕES GERAIS
+- Gravidez e amamentação
+- Doenças autoimunes ativas
+- Alergias a componentes dos produtos
+- (Avaliação médica obrigatória)
+
+❓ PERGUNTAS FREQUENTES
+P: Dói?
+R: Usamos anestesia tópica, desconforto mínimo
+
+P: Quanto tempo dura?
+R: Varia de 6 meses a 2 anos conforme procedimento
+
+P: Precisa afastamento?
+R: Maioria dos procedimentos não requer afastamento"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-mono text-sm"
+              ></textarea>
+              <div class="mt-3 space-y-2">
+                <p class="text-xs text-slate-600 dark:text-slate-400">
+                  ✅ <strong>A IA usará essas informações para:</strong>
+                </p>
+                <ul class="text-xs text-slate-500 dark:text-slate-400 space-y-1 ml-4">
+                  <li>• Responder perguntas sobre horários, endereço, telefone</li>
+                  <li>• Informar valores e formas de pagamento quando o lead perguntar</li>
+                  <li>• Explicar procedimentos oferecidos</li>
+                  <li>• Esclarecer dúvidas comuns de forma precisa</li>
+                  <li>• Manter consistência nas informações passadas</li>
+                </ul>
+                <p class="text-xs text-amber-600 dark:text-amber-400 mt-3">
+                  ⚠️ <strong>Importante:</strong> Quanto mais detalhadas as informações, melhor a IA conseguirá atender os leads.
+                </p>
               </div>
             </div>
           </div>
