@@ -91,6 +91,12 @@ module SdrIa
       if response.present?
         send_message(response)
         Rails.logger.info "[SDR IA] [V2] Resposta conversacional enviada"
+
+        # GATILHO: Se a mensagem indica encerramento, qualificar e atribuir automaticamente
+        if response_indicates_handoff?(response)
+          Rails.logger.info "[SDR IA] [V2] Mensagem de encerramento detectada! Iniciando qualificação automática..."
+          qualify_lead(history)
+        end
       else
         Rails.logger.error "[SDR IA] [V2] Falha ao gerar resposta, usando fallback"
         send_message("Desculpe, tive um problema técnico. Pode repetir?")
@@ -98,6 +104,22 @@ module SdrIa
     rescue StandardError => e
       Rails.logger.error "[SDR IA] [V2] Erro ao gerar resposta conversacional: #{e.message}"
       # Não envia nada em caso de erro para não spammar
+    end
+
+    def response_indicates_handoff?(response)
+      # Detectar frases que indicam passagem para especialista
+      handoff_keywords = [
+        'já temos todas as informações',
+        'encaminhar seu contato',
+        'nosso especialista',
+        'entrará em contato',
+        'dar continuidade',
+        'vamos te conectar',
+        'nossa equipe vai entrar em contato'
+      ]
+
+      response_downcase = response.downcase
+      handoff_keywords.any? { |keyword| response_downcase.include?(keyword) }
     end
 
     def qualify_lead(history)
