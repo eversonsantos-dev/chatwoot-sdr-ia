@@ -204,31 +204,31 @@ module SdrIa
 
     def send_closing_message(analysis)
       temperatura = analysis['temperatura']
-      clinic_name = @config.dig('clinic_name') || 'nossa clínica'
       agent_name = get_agent_name
 
-      mensagem = case temperatura
-                 when 'quente'
-                   "Perfeito! Vejo que você tem grande interesse 🎯\n" \
-                   "Vou te conectar AGORA com #{agent_name}, nosso especialista em SDR. " \
-                   "Ele vai te ajudar a agendar sua avaliação! 😊"
-                 when 'morno'
-                   "Ótimo! Entendi suas necessidades 😊\n" \
-                   "Vou te enviar nosso portfólio com resultados reais e tabela de valores.\n" \
-                   "#{agent_name} vai entrar em contato em até 2 horas para tirar suas dúvidas. Tudo bem?"
-                 when 'frio'
-                   "Entendi que você está no início da pesquisa! 💙\n" \
-                   "Vou te adicionar em nosso grupo de conteúdos e promoções.\n" \
-                   "Quando quiser conversar mais, é só chamar!"
-                 when 'muito_frio'
-                   "Obrigado pelo contato! 😊\n" \
-                   "Vou te deixar em nossa base para futuras novidades.\n" \
-                   "Qualquer coisa, estamos à disposição!"
-                 else
-                   "Obrigado pelas informações!"
-                 end
+      # Buscar mensagem configurável do banco, com fallback para mensagens padrão
+      closing_messages = @config.dig('closing_messages') || {}
+      mensagem_template = closing_messages[temperatura] || get_default_closing_message(temperatura)
+
+      # Substituir placeholder {{agent_name}} pelo nome real do agente
+      mensagem = mensagem_template.gsub('{{agent_name}}', agent_name)
 
       send_message(mensagem)
+    end
+
+    def get_default_closing_message(temperatura)
+      case temperatura
+      when 'quente'
+        "Perfeito! Vejo que você tem grande interesse 🎯\nVou te conectar AGORA com {{agent_name}}, nossa especialista. Ela vai te ajudar a agendar sua avaliação! 😊"
+      when 'morno'
+        "Ótimo! Entendi suas necessidades 😊\nVou te enviar nosso portfólio com resultados reais e tabela de valores.\n{{agent_name}} vai entrar em contato em até 2 horas para tirar suas dúvidas. Tudo bem?"
+      when 'frio'
+        "Entendi que você está no início da pesquisa! 💙\nVou te adicionar em nosso grupo de conteúdos e promoções.\nQuando quiser conversar mais, é só chamar!"
+      when 'muito_frio'
+        "Obrigado pelo contato! 😊\nSe mudar de ideia, estarei por aqui!"
+      else
+        "Obrigado pelas informações!"
+      end
     end
 
     def get_agent_name

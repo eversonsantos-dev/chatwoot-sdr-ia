@@ -75,6 +75,12 @@ const settings = ref({
       quente_team_id: null,
       morno_team_id: null
     },
+    closing_messages: {
+      quente: "Perfeito! Vejo que você tem grande interesse 🎯\nVou te conectar AGORA com {{agent_name}}, nossa especialista. Ela vai te ajudar a agendar sua avaliação! 😊",
+      morno: "Ótimo! Entendi suas necessidades 😊\nVou te enviar nosso portfólio com resultados reais e tabela de valores.\n{{agent_name}} vai entrar em contato em até 2 horas para tirar suas dúvidas. Tudo bem?",
+      frio: "Entendi que você está no início da pesquisa! 💙\nVou te adicionar em nosso grupo de conteúdos e promoções.\nQuando quiser conversar mais, é só chamar!",
+      muito_frio: "Obrigado pelo contato! 😊\nSe mudar de ideia, estarei por aqui!"
+    },
     reconduzir: {
       max_tentativas: 3,
       delay_segundos: 2
@@ -90,6 +96,7 @@ const newProcedimento = ref('');
 const tabs = [
   { id: 'general', label: 'Configurações Gerais', icon: '⚙️' },
   { id: 'knowledge', label: 'Base de Conhecimento', icon: '📚' },
+  { id: 'messages', label: 'Mensagens de Encerramento', icon: '💬' },
   { id: 'prompts', label: 'Prompts da IA', icon: '🤖' },
   { id: 'questions', label: 'Perguntas por Etapa', icon: '❓' },
   { id: 'scoring', label: 'Sistema de Scoring', icon: '📊' }
@@ -631,6 +638,107 @@ R: Maioria dos procedimentos não requer afastamento"
                 <p class="text-xs text-amber-600 dark:text-amber-400 mt-3">
                   ⚠️ <strong>Importante:</strong> Quanto mais detalhadas as informações, melhor a IA conseguirá atender os leads.
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Mensagens de Encerramento -->
+      <div v-show="activeTab === 'messages'" class="space-y-6">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+            💬 Mensagens de Encerramento
+          </h3>
+
+          <div class="space-y-4">
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+              <div class="flex items-start">
+                <div class="mr-3 text-2xl">💡</div>
+                <div>
+                  <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                    Como funcionam as mensagens?
+                  </h4>
+                  <p class="text-sm text-blue-800 dark:text-blue-200">
+                    Estas são as mensagens que a IA envia ao lead após a qualificação, baseadas na temperatura (quente, morno, frio, muito frio).
+                    Use <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">{{agent_name}}</code> como placeholder para o nome do agente.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mensagem Lead Quente -->
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                🔴 Mensagem para Lead Quente (alta prioridade)
+              </label>
+              <textarea
+                v-model="settings.sdr_ia.closing_messages.quente"
+                rows="4"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 font-mono text-sm"
+                placeholder="Mensagem enviada quando o lead está muito interessado..."
+              ></textarea>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Enviada quando o lead tem alto score e urgência imediata
+              </p>
+            </div>
+
+            <!-- Mensagem Lead Morno -->
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                🟡 Mensagem para Lead Morno (média prioridade)
+              </label>
+              <textarea
+                v-model="settings.sdr_ia.closing_messages.morno"
+                rows="4"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 font-mono text-sm"
+                placeholder="Mensagem enviada quando o lead tem interesse moderado..."
+              ></textarea>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Enviada quando o lead tem score médio e está pesquisando
+              </p>
+            </div>
+
+            <!-- Mensagem Lead Frio -->
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                🔵 Mensagem para Lead Frio (baixa prioridade)
+              </label>
+              <textarea
+                v-model="settings.sdr_ia.closing_messages.frio"
+                rows="4"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 font-mono text-sm"
+                placeholder="Mensagem enviada quando o lead está apenas pesquisando..."
+              ></textarea>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Enviada quando o lead está no início da pesquisa
+              </p>
+            </div>
+
+            <!-- Mensagem Lead Muito Frio -->
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                ⚫ Mensagem para Lead Muito Frio (sem interesse)
+              </label>
+              <textarea
+                v-model="settings.sdr_ia.closing_messages.muito_frio"
+                rows="4"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 font-mono text-sm"
+                placeholder="Mensagem enviada quando o lead não tem interesse..."
+              ></textarea>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Enviada quando o lead tem score muito baixo ou não respondeu
+              </p>
+            </div>
+
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mt-4">
+              <div class="flex items-start">
+                <div class="mr-3 text-xl">💡</div>
+                <div class="text-sm text-amber-800 dark:text-amber-200">
+                  <strong>Dica:</strong> Use <code class="bg-amber-100 dark:bg-amber-800 px-1 rounded">{{agent_name}}</code> para inserir automaticamente o nome do agente configurado.
+                  <br/>
+                  Exemplo: "Vou te conectar com <code class="bg-amber-100 dark:bg-amber-800 px-1 rounded">{{agent_name}}</code>" → "Vou te conectar com Maria"
+                </div>
               </div>
             </div>
           </div>

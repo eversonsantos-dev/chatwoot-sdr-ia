@@ -45,6 +45,7 @@ class SdrIaConfig < ApplicationRecord
           'quente_team_id' => quente_team_id,
           'morno_team_id' => morno_team_id
         },
+        'closing_messages' => closing_messages || {},
         'procedimentos' => procedimentos,
         'reconduzir' => {
           'max_tentativas' => max_tentativas_reconduzir,
@@ -78,6 +79,7 @@ class SdrIaConfig < ApplicationRecord
       threshold_muito_frio: params.dig(:sdr_ia, :temperature_thresholds, :muito_frio),
       quente_team_id: params.dig(:sdr_ia, :teams, :quente_team_id),
       morno_team_id: params.dig(:sdr_ia, :teams, :morno_team_id),
+      closing_messages: params.dig(:sdr_ia, :closing_messages),
       procedimentos: params.dig(:sdr_ia, :procedimentos),
       max_tentativas_reconduzir: params.dig(:sdr_ia, :reconduzir, :max_tentativas),
       delay_reconduzir_segundos: params.dig(:sdr_ia, :reconduzir, :delay_segundos)
