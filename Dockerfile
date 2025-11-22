@@ -80,10 +80,18 @@ RUN export PNPM_HOME="/root/.local/share/pnpm" && \
     cd /app && \
     pnpm install --force
 
-# Recompilar assets
+# Limpar TODOS os caches do Vite antes de compilar
+RUN rm -rf /app/node_modules/.vite/* && \
+    rm -rf /root/.vite/* && \
+    rm -rf /root/.cache/* && \
+    rm -rf /tmp/* && \
+    echo "=== Caches limpos antes da compilação ==="
+
+# Recompilar assets (FORÇAR REBUILD COMPLETO)
 RUN export PNPM_HOME="/root/.local/share/pnpm" && \
     export PATH="$PNPM_HOME:$PATH" && \
     cd /app && \
+    rm -rf /app/public/vite/* && \
     SECRET_KEY_BASE=placeholder RAILS_ENV=production NODE_ENV=production bundle exec rails assets:precompile
 
 # Verificar compilação
