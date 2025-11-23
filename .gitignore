@@ -54,3 +54,4 @@ vendor/bundle/
 # Configurações locais personalizadas
 config/settings.local.yml
 plugins/sdr_ia/config/settings.local.yml
+docs/backups/**/docker_image_*.tar.gz

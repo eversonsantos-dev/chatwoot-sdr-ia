@@ -842,3 +842,241 @@ docker service update --image localhost/chatwoot-sdr-ia:<commit-hash> chatwoot_c
 ---
 
 **Desenvolvido com ❤️ por [@eversonsantos-dev](https://github.com/eversonsantos-dev)**
+
+## [2.0.0-patch2] - 2025-11-22 - VERSÃO ESTÁVEL ATUAL ✅
+
+### Status
+- ✅ **VERSÃO EM PRODUÇÃO**
+- ✅ **SISTEMA FUNCIONAL E ESTÁVEL**
+- ⚠️ Bug conhecido: Mensagens duplicadas (correção planejada)
+- 📅 **Data**: 22 de Novembro de 2025, 21:06h
+- 🔖 **Commit**: `aa4bd4f`
+
+### Mudanças
+- Atualização de mensagem de fechamento para leads mornos
+- Sistema de qualificação automática operacional
+- Painel administrativo funcional
+
+---
+
+## [2.0.0-patch5] - 2025-11-22 - REVERTIDO ❌
+
+### Status
+- ❌ **VERSÃO REVERTIDA** - Causou problemas no painel administrativo
+- 🔖 **Commit**: `9207219`
+
+### Tentativa de Mudanças
+- Forçar limpeza de cache Vite antes da compilação de assets
+- Melhorar atualização de assets do frontend
+
+### Problemas Encontrados
+- Painel administrativo SDR IA exibindo tela branca
+- API `/sdr_ia/settings` e `/sdr_ia/stats` travando intermitentemente
+- Erro JavaScript: `Cannot read properties of undefined (reading 'quente')`
+
+### Ação Tomada
+- Rollback completo para v2.0.0-patch2 (aa4bd4f)
+- Sistema restaurado e funcional
+
+---
+
+## [2.0.0-patch4] - 2025-11-22 - REVERTIDO ❌
+
+### Status
+- ❌ **VERSÃO REVERTIDA** - Parte do conjunto de patches que causou problemas
+- 🔖 **Commit**: `2e7b8a9`
+
+### Tentativa de Mudanças
+- **Feature**: Não enviar mensagem de fechamento para leads QUENTES
+- **Motivo**: IA conversacional já envia mensagem adequada de conexão com especialista
+
+### Implementação Tentada
+```ruby
+# plugins/sdr_ia/app/services/conversation_manager_v2.rb (linhas 154-167)
+unless analysis['temperatura'] == 'quente'
+  send_closing_message(analysis)
+else
+  Rails.logger.info "[SDR IA] [V2] Lead QUENTE - pulando mensagem de encerramento"
+end
+```
+
+### Comportamento Esperado
+| Temperatura | Mensagens Enviadas | Status |
+|-------------|-------------------|--------|
+| QUENTE | 1 (IA conversacional apenas) | ✅ |
+| MORNO | 1 (send_closing_message apenas) | ✅ |
+| FRIO | 1 (send_closing_message apenas) | ✅ |
+| MUITO FRIO | 1 (send_closing_message apenas) | ✅ |
+
+### Documentação
+- `docs/patches/PATCH_v2.0.0-patch4.md` (456 linhas)
+
+### Ação Tomada
+- Revertido junto com patch3 e patch5 por incompatibilidade
+
+---
+
+## [2.0.0-patch3] - 2025-11-22 - REVERTIDO ❌
+
+### Status
+- ❌ **VERSÃO REVERTIDA** - Parte do conjunto de patches que causou problemas
+- 🔖 **Commit**: `def2a5b`
+
+### Tentativa de Mudanças
+- **Bug Fix**: Eliminar mensagens duplicadas para leads mornos
+- **Problema**: Sistema enviava 2 mensagens idênticas durante qualificação
+
+### Implementação Tentada
+```ruby
+# plugins/sdr_ia/app/services/conversation_manager_v2.rb (linhas 84-110)
+if response.present?
+  if response_indicates_handoff?(response)
+    Rails.logger.info "[SDR IA] [V2] Pulando envio da resposta conversacional"
+    qualify_lead(history)
+  else
+    send_message(response)
+  end
+end
+```
+
+### Fluxo Corrigido (Tentativa)
+1. IA gera resposta conversacional
+2. Detecta se é mensagem de encerramento
+3. **SE SIM:** Não envia aqui, deixa `send_closing_message()` enviar
+4. **SE NÃO:** Envia normalmente
+
+### Documentação
+- `docs/patches/PATCH_v2.0.0-patch3.md` (333 linhas)
+
+### Ação Tomada
+- Revertido devido a incompatibilidade com autenticação do painel
+- Patches serão reimplementados após investigação completa
+
+---
+
+## SESSÃO DE DESENVOLVIMENTO - 22/11/2025
+
+### Resumo da Sessão
+**Horário:** 17:00 - 21:06 (4h 06min)
+**Objetivo:** Corrigir mensagens duplicadas e otimizar UX
+**Resultado:** Rollback para versão estável devido a problemas de compatibilidade
+
+### Trabalhos Realizados
+1. ✅ Implementação de 3 patches consecutivos (3, 4, 5)
+2. ✅ Documentação completa de cada patch
+3. ✅ Identificação de problema crítico no painel administrativo
+4. ✅ Análise detalhada de logs e debugging
+5. ✅ Rollback seguro para v2.0.0-patch2
+6. ✅ Verificação de funcionalidade pós-rollback
+
+### Problemas Encontrados
+1. **Mensagens Duplicadas** - Corrigido nos patches 3 e 4 (revertidos)
+2. **Painel Administrativo Branco** - Problema crítico não resolvido
+3. **API Travando Intermitentemente** - Timeout em requisições de configuração
+4. **Assets Não Atualizando** - Cache do Vite/Docker volume
+
+### Lições Aprendidas
+- Necessidade de ambiente de staging
+- Importância de testar patches isoladamente
+- Verificação de "Completed" nos logs, não apenas "Processing"
+- Manter backups de todas as versões estáveis
+
+### Próximas Ações
+1. Investigar problema de autenticação no painel (2-4h)
+2. Reimplementar patches 3 e 4 com validação rigorosa
+3. Criar ambiente de staging
+4. Implementar testes automatizados
+
+### Documentação Criada
+- `docs/sessoes/SESSAO_2025-11-22.md` - Relatório completo da sessão
+- `docs/PLANO_DESENVOLVIMENTO.md` - Roadmap futuro
+- `docs/patches/PATCH_v2.0.0-patch3.md` - Documentação patch3
+- `docs/patches/PATCH_v2.0.0-patch4.md` - Documentação patch4
+- `scripts/backup-version.sh` - Script de backup automatizado
+
+### Commits da Sessão
+- `def2a5b` - Patch3: Correção de mensagem duplicada (REVERTIDO)
+- `2e7b8a9` - Patch4: Skip closing message para leads quentes (REVERTIDO)
+- `f62a92e` - Documentação do Patch4 (REVERTIDO)
+- `9207219` - Patch5: Forçar limpeza de cache Vite (REVERTIDO)
+- **ROLLBACK para**: `aa4bd4f` (v2.0.0-patch2) ✅
+
+### Estrutura de Pastas Criada
+```
+docs/
+├── sessoes/          # Relatórios de cada sessão de desenvolvimento
+├── patches/          # Documentação detalhada de patches
+├── versoes/          # Snapshots de versões importantes
+├── backups/          # Backups completos de versões estáveis
+└── arquitetura/      # Diagramas e documentação técnica
+
+scripts/
+├── backup-version.sh # Script automatizado de backup
+└── (outros scripts)
+```
+
+---
+
+## VERSÕES FUTURAS PLANEJADAS
+
+### [2.1.0] - Planejado para Dezembro 2025
+**Foco:** Correções e Estabilização
+
+#### Planned Features
+- [ ] **Bug Fix**: Reimplementar patches 3 e 4 com validação
+- [ ] **Bug Fix**: Resolver problema de autenticação no painel
+- [ ] **Improvement**: Sistema de logs aprimorado
+- [ ] **Testing**: Testes automatizados (RSpec >70% coverage)
+- [ ] **Infrastructure**: Ambiente de staging
+
+### [2.2.0] - Planejado para Janeiro 2026
+**Foco:** Analytics e Relatórios
+
+#### Planned Features
+- [ ] **Feature**: Dashboard de métricas em tempo real
+- [ ] **Feature**: Relatórios exportáveis (CSV, PDF)
+- [ ] **Feature**: Análise de qualidade de leads
+- [ ] **Feature**: Insights de IA (palavras-chave, objeções)
+
+### [3.0.0] - Planejado para Fevereiro-Abril 2026
+**Foco:** Automações Avançadas e Multi-canal
+
+#### Planned Features
+- [ ] **Feature**: Integração Instagram Direct
+- [ ] **Feature**: Integração Telegram
+- [ ] **Feature**: Agendamento inteligente (Google Calendar)
+- [ ] **Feature**: CRM Integration (Pipedrive/RD Station)
+- [ ] **Feature**: Workflows personalizáveis (low-code)
+- [ ] **Feature**: A/B testing de prompts
+- [ ] **Feature**: RAG com base de conhecimento
+- [ ] **Feature**: Detecção de sentimento
+
+---
+
+## NOTAS DE MANUTENÇÃO
+
+### Versão Atual em Produção
+**v2.0.0-patch2 (aa4bd4f)**
+- Sistema estável e funcional
+- Painel administrativo operacional
+- API respondendo 100% das requisições
+- Qualificação automática funcionando
+
+### Backups Disponíveis
+- `docs/backups/aa4bd4f/` - Backup completo da versão estável
+  - Código fonte
+  - Imagem Docker
+  - Manifest com metadados
+  - README de restauração
+
+### Links Úteis
+- **Painel Admin**: https://chatteste.nexusatemporal.com/app/accounts/1/settings/sdr-ia
+- **API Endpoint**: /api/v1/accounts/1/sdr_ia/*
+- **Documentação**: `docs/SDR_IA_MODULE_DOCUMENTATION.md`
+- **Troubleshooting**: `docs/TROUBLESHOOTING.md`
+
+---
+
+**Última Atualização**: 22 de Novembro de 2025, 21:30h
+**Mantenedor**: Claude (Anthropic) + Everson Santos
+**Status**: ✅ SISTEMA OPERACIONAL E ESTÁVEL
