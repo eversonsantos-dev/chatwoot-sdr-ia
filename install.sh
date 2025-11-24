@@ -42,6 +42,15 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+# Verificar se está no diretório do plugin
+if [ ! -d "plugins/sdr_ia" ]; then
+    error "Este script deve ser executado a partir do diretório raiz do Chatwoot SDR IA"
+    error "Estrutura esperada: plugins/sdr_ia/, db/migrate/, etc"
+    exit 1
+fi
+
+success "Arquivos do plugin encontrados"
+
 # Verificar diretório Chatwoot
 info "Verificando instalação do Chatwoot..."
 
@@ -79,16 +88,6 @@ tar -czf "$BACKUP_FILE" \
     -C "$(dirname $CHATWOOT_PATH)" "$(basename $CHATWOOT_PATH)" 2>/dev/null || true
 
 success "Backup criado em: $BACKUP_FILE"
-
-# Baixar plugin SDR IA
-info "Baixando plugin SDR IA do GitHub..."
-cd /tmp
-rm -rf chatwoot-sdr-ia
-git clone https://github.com/eversonsantos-dev/chatwoot-sdr-ia.git
-cd chatwoot-sdr-ia
-git checkout v2.1.1
-
-success "Plugin SDR IA v2.1.1 baixado"
 
 # Copiar plugin para Chatwoot
 info "Instalando plugin no Chatwoot..."
@@ -297,15 +296,9 @@ tail -f log/production.log | grep "\[Audio\]"
 
 ---
 
-## 📚 Documentação Completa
-
-- **GitHub:** https://github.com/eversonsantos-dev/chatwoot-sdr-ia
-- **CHANGELOG:** https://github.com/eversonsantos-dev/chatwoot-sdr-ia/blob/main/CHANGELOG.md
-- **Issues:** https://github.com/eversonsantos-dev/chatwoot-sdr-ia/issues
-
----
-
 **Instalação completa! 🎉**
+
+Para suporte, entre em contato com o fornecedor do sistema.
 DOC_END
 
 success "Documentação criada em: $CHATWOOT_PATH/SDR_IA_CONFIG.md"
@@ -335,8 +328,6 @@ echo ""
 echo "3. ${YELLOW}Teste o sistema:${NC}"
 echo "   - Envie uma mensagem de teste"
 echo "   - Envie um áudio de teste"
-echo ""
-echo -e "${BLUE}Documentação:${NC} https://github.com/eversonsantos-dev/chatwoot-sdr-ia"
 echo ""
 echo -e "${GREEN}Instalação completa! 🎉${NC}"
 echo ""

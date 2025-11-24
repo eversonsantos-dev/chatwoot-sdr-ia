@@ -1,6 +1,6 @@
-# 🚀 Instalação Rápida - Chatwoot SDR IA v2.1.1
+# 🚀 Instalação - Chatwoot SDR IA v2.1.1
 
-Instalação automática do plugin SDR IA em qualquer servidor Chatwoot.
+Guia de instalação do plugin SDR IA para Chatwoot.
 
 ---
 
@@ -8,78 +8,64 @@ Instalação automática do plugin SDR IA em qualquer servidor Chatwoot.
 
 - Chatwoot instalado (versão 2.x ou superior)
 - Acesso root ao servidor
-- Git instalado
 - API Key da OpenAI
+- Acesso aos arquivos do plugin (fornecidos após compra)
 
 ---
 
-## ⚡ Instalação com 1 Comando
+## ⚡ Instalação Rápida
+
+### 1. Extrair Arquivos
+
+Após receber o arquivo do plugin, extraia no servidor:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/eversonsantos-dev/chatwoot-sdr-ia/main/install.sh | sudo bash
+# Fazer upload do arquivo para o servidor
+scp chatwoot-sdr-ia-v2.1.1.zip root@seu-servidor:/root/
+
+# Conectar ao servidor
+ssh root@seu-servidor
+
+# Extrair arquivos
+cd /root
+unzip chatwoot-sdr-ia-v2.1.1.zip
+cd chatwoot-sdr-ia
 ```
 
-### Ou instalação manual:
+### 2. Executar Instalador
 
 ```bash
-# 1. Baixar o script
-wget https://raw.githubusercontent.com/eversonsantos-dev/chatwoot-sdr-ia/main/install.sh
-
-# 2. Dar permissão de execução
+# Dar permissão de execução
 chmod +x install.sh
 
-# 3. Executar
+# Executar instalador
 sudo ./install.sh
 ```
 
+O script vai solicitar:
+1. **Caminho do Chatwoot** (detecta automaticamente)
+2. **API Key da OpenAI** (obrigatório)
+
 ---
 
-## 🔧 O que o script faz?
+## 🔧 O que o Instalador Faz
 
 1. ✅ Detecta automaticamente a instalação do Chatwoot
 2. ✅ Cria backup completo antes de instalar
-3. ✅ Baixa o plugin SDR IA v2.1.1 do GitHub
-4. ✅ Copia arquivos para o Chatwoot
-5. ✅ Configura variáveis de ambiente
-6. ✅ Executa migrations do banco (se instalação local)
+3. ✅ Copia plugin para `plugins/sdr_ia/`
+4. ✅ Copia migrations do banco de dados
+5. ✅ Configura variáveis de ambiente (.env)
+6. ✅ Executa migrations (se instalação local)
 7. ✅ Cria documentação de configuração
 8. ✅ Instrui sobre próximos passos
 
 ---
 
-## 📝 Durante a Instalação
-
-O script vai solicitar:
-
-1. **Caminho do Chatwoot** (detecta automaticamente em /root/chatwoot ou /home/chatwoot)
-2. **API Key da OpenAI** (necessária para IA e transcrição de áudio)
-
----
-
-## 🎯 Após a Instalação
-
-### 1. Configurar no Chatwoot
-
-1. Faça login no Chatwoot como **Super Admin**
-2. Vá em **Settings** → **Inboxes** → Selecione seu inbox
-3. Configure na aba **SDR IA**:
-   - ✅ Ativar SDR IA
-   - 📝 Nome da Clínica
-   - 📍 Endereço Completo
-   - 🔗 Link de Agendamento
-   - 👥 Closers (agentes que receberão leads)
-
-### 2. Testar
-
-- Envie uma mensagem de texto
-- Envie um áudio
-- Verifique os logs
-
----
-
 ## 🐳 Instalação Docker
 
-Se o Chatwoot está rodando em Docker, após o script você precisa:
+Se seu Chatwoot está rodando em Docker, após executar o instalador:
+
+### Docker Compose:
 
 ```bash
 # 1. Rebuild da imagem
@@ -93,79 +79,277 @@ docker exec -it chatwoot_app bundle exec rails db:migrate
 docker-compose restart
 ```
 
-**Docker Swarm:**
+### Docker Swarm:
+
 ```bash
+# 1. Rebuild da imagem
+cd /caminho/do/chatwoot
+docker build -t localhost/chatwoot:sdr-ia .
+
+# 2. Executar migrations
+docker exec -it $(docker ps -q -f name=chatwoot_app) bundle exec rails db:migrate
+
+# 3. Atualizar serviços
 docker service update --force chatwoot_app
 docker service update --force chatwoot_sidekiq
 ```
 
 ---
 
+## 📝 Configuração Pós-Instalação
+
+### 1. Acessar Painel Admin
+
+1. Faça login no Chatwoot como **Super Admin**
+2. Vá em **Settings** → **Inboxes**
+3. Selecione o inbox que deseja configurar
+
+### 2. Configurar SDR IA
+
+Na aba **SDR IA** do inbox, configure:
+
+- ✅ **Ativar SDR IA**: ON
+- 📝 **Nome da Clínica/Empresa**: Nome completo
+- 📍 **Endereço**: Endereço completo com cidade/estado
+- 🔗 **Link de Agendamento**: URL do seu sistema de agendamento
+- 👥 **Closers**: Selecione os agentes que receberão leads qualificados
+
+### 3. Testar o Sistema
+
+1. Envie uma mensagem de teste para o inbox
+2. Envie um áudio de teste (MP3, M4A, WAV ou OGG)
+3. Verifique se a IA respondeu
+4. Verifique os logs para confirmar funcionamento
+
+---
+
 ## 📊 Funcionalidades
 
-- 🤖 **IA Conversacional** - Responde automaticamente aos leads
-- 🎤 **Transcrição de Áudio** - Áudios do WhatsApp transcritos automaticamente
-- 📈 **Qualificação Inteligente** - Sistema de pontuação 0-130 pontos
-- 🎯 **Round Robin** - Distribuição automática de leads entre closers
-- ⏱️ **Buffer de Mensagens** - Agrupa mensagens em 35s (reduz custos)
+### 🤖 IA Conversacional
+- Responde automaticamente aos leads
+- Entende contexto da conversa
+- Tom natural e humanizado
+
+### 🎤 Transcrição de Áudio
+- Suporta MP3, M4A, WAV, OGG
+- Transcrição automática via OpenAI Whisper
+- Tamanho máximo: 25MB por áudio
+
+### 📈 Qualificação Inteligente
+
+**Sistema de Pontuação (0-130 pontos):**
+
+- **INTERESSE** (0-50 pontos) - Fator principal
+  - Procedimento específico: 50 pontos
+  - Procedimento genérico: 40 pontos
+  
+- **URGÊNCIA** (0-30 pontos)
+  - Esta semana: 30 pontos
+  - Próximas 2 semanas: 25 pontos
+  - Até 30 dias: 20 pontos
+  
+- **CONHECIMENTO** (0-20 pontos)
+- **LOCALIZAÇÃO** (0-10 pontos)
+- **MOTIVAÇÃO BÔNUS** (0-20 pontos)
+
+**Classificação por Temperatura:**
+
+- 🔴 **QUENTE** (90-130 pontos): Atribuído imediatamente ao closer
+- 🟡 **MORNO** (50-89 pontos): Atribuído ao closer
+- 🔵 **FRIO** (20-49 pontos): Apenas nutrição
+- ⚫ **MUITO FRIO** (0-19 pontos): Apenas registro
+
+### 🎯 Round Robin Automático
+- Distribuição balanceada de leads entre closers
+- Rastreamento persistente (Redis)
+- Leads QUENTES e MORNOS são atribuídos automaticamente
+
+### ⏱️ Buffer de Mensagens (35 segundos)
+- Agrupa mensagens consecutivas do lead
+- IA responde uma única vez para múltiplas mensagens
+- Reduz custo de API OpenAI em ~70%
+
+---
+
+## 📊 Monitoramento
+
+### Verificar Logs (Docker):
+
+```bash
+# Logs gerais do SDR IA
+docker logs -f chatwoot_sidekiq | grep "\[SDR IA\]"
+
+# Logs de transcrição de áudio
+docker logs -f chatwoot_sidekiq | grep "\[Audio\]"
+
+# Logs de qualificação
+docker logs -f chatwoot_sidekiq | grep "\[Qualification\]"
+
+# Logs de Round Robin
+docker logs -f chatwoot_sidekiq | grep "\[RoundRobin\]"
+```
+
+### Verificar Logs (Local):
+
+```bash
+# Logs gerais
+tail -f log/production.log | grep "\[SDR IA\]"
+
+# Logs de áudio
+tail -f log/production.log | grep "\[Audio\]"
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### ✗ Áudio não está sendo transcrito
+
+**Causas possíveis:**
+1. API Key da OpenAI incorreta ou sem créditos
+2. Formato de áudio não suportado
+3. Arquivo muito grande (>25MB)
+
+**Solução:**
+```bash
+# Verificar logs de áudio
+docker logs chatwoot_sidekiq | grep "\[Audio\]" | tail -20
+
+# Verificar .env
+grep OPENAI_API_KEY /caminho/do/chatwoot/.env
+```
+
+---
+
+### ✗ IA não está respondendo
+
+**Causas possíveis:**
+1. SDR IA não ativado no inbox
+2. Configurações do inbox incompletas
+3. API Key da OpenAI incorreta
+
+**Solução:**
+1. Settings → Inboxes → [Seu Inbox] → SDR IA
+2. Verificar se "Ativar SDR IA" está ON
+3. Verificar se Nome da Clínica e Endereço estão preenchidos
+4. Verificar logs: `docker logs chatwoot_sidekiq | grep "\[SDR IA\]"`
+
+---
+
+### ✗ Leads não estão sendo atribuídos
+
+**Causas possíveis:**
+1. Nenhum closer configurado no inbox
+2. Redis não está rodando
+3. Lead com temperatura FRIO ou MUITO FRIO
+
+**Solução:**
+1. Settings → Inboxes → [Seu Inbox] → SDR IA → Adicionar closers
+2. Verificar Redis: `docker ps | grep redis` ou `redis-cli ping`
+3. Verificar logs: `docker logs chatwoot_sidekiq | grep "\[RoundRobin\]"`
+
+---
+
+### ✗ Erro após atualizar Chatwoot
+
+**Causa:**
+Atualização do Chatwoot pode sobrescrever arquivos do plugin
+
+**Solução:**
+```bash
+# Restaurar backup
+cd /root/backups
+tar -xzf chatwoot-pre-sdr-ia-[DATA].tar.gz
+
+# Ou reinstalar o plugin
+cd /root/chatwoot-sdr-ia
+sudo ./install.sh
+```
 
 ---
 
 ## 🔐 Segurança
 
-- Backup automático antes da instalação
-- API Key armazenada apenas no .env
-- Validação de todos os caminhos
-- Logs detalhados de todas as operações
+- ✅ Backup automático antes de cada instalação
+- ✅ API Key armazenada apenas no .env (não exposta)
+- ✅ Validação de todos os caminhos e arquivos
+- ✅ Logs detalhados de todas as operações
+- ✅ Transcrições de áudio deletadas após processamento
 
 ---
 
-## 📚 Documentação Completa
+## 📈 Boas Práticas
 
-- **GitHub:** https://github.com/eversonsantos-dev/chatwoot-sdr-ia
-- **CHANGELOG:** https://github.com/eversonsantos-dev/chatwoot-sdr-ia/blob/main/CHANGELOG.md
-- **Erros e Correções:** https://github.com/eversonsantos-dev/chatwoot-sdr-ia/blob/main/ERROS_E_CORRECOES_COMPLETO.md
-- **Release v2.1.1:** https://github.com/eversonsantos-dev/chatwoot-sdr-ia/releases/tag/v2.1.1
+### 1. Monitoramento Regular
 
----
+```bash
+# Criar script de monitoramento
+cat > /root/monitor-sdr-ia.sh <<'MONITOR'
+#!/bin/bash
+echo "=== Estatísticas de Hoje ==="
+docker logs chatwoot_sidekiq --since 24h | grep "\[SDR IA\]" | grep -c "Resposta enviada"
+echo "Leads qualificados:"
+docker logs chatwoot_sidekiq --since 24h | grep "\[Qualification\]" | grep -c "QUENTE\|MORNO"
+echo "Áudios transcritos:"
+docker logs chatwoot_sidekiq --since 24h | grep "\[Audio\]" | grep -c "Transcrição bem-sucedida"
+MONITOR
 
-## 🆘 Suporte
+chmod +x /root/monitor-sdr-ia.sh
+```
 
-- **Issues:** https://github.com/eversonsantos-dev/chatwoot-sdr-ia/issues
-- **Documentação:** Após instalação, veja `SDR_IA_CONFIG.md` no diretório do Chatwoot
+### 2. Backup Regular
 
----
+```bash
+# Adicionar ao cron para backup semanal
+echo "0 3 * * 0 tar -czf /root/backups/chatwoot-weekly-\$(date +\%Y\%m\%d).tar.gz /root/chatwoot" | crontab -
+```
 
-## ⚠️ Troubleshooting
+### 3. Otimização de Custos
 
-### Erro: "Chatwoot não encontrado"
-- O script detecta automaticamente em `/root/chatwoot` ou `/home/chatwoot`
-- Se está em outro local, o script vai solicitar o caminho
-
-### Erro: "Permission denied"
-- Execute com `sudo`: `sudo ./install.sh`
-
-### IA não responde
-1. Verifique se está ativado no inbox: Settings → Inboxes → SDR IA
-2. Verifique se a API Key está configurada no `.env`
-3. Verifique os logs: `tail -f log/production.log | grep "\[SDR IA\]"`
-
-### Áudio não transcreve
-1. Verifique se a API Key da OpenAI está correta
-2. Verifique logs: `tail -f log/production.log | grep "\[Audio\]"`
-3. Confirme que o formato é suportado (MP3, M4A, WAV, OGG)
+- Buffer de 35s já reduz custos em ~70%
+- Monitore uso da API OpenAI no dashboard: https://platform.openai.com/usage
+- Considere usar GPT-3.5 Turbo para reduzir custos (configurável)
 
 ---
 
-## 💡 Dicas
+## 📞 Suporte
 
-- O backup é salvo em `/root/backups/`
-- A documentação é criada em `SDR_IA_CONFIG.md`
-- Logs sempre com tag `[SDR IA]` para fácil busca
-- Buffer de 35s reduz custo de API em ~70%
+### Documentação Adicional
+
+Após instalação, consulte:
+- `/caminho/do/chatwoot/SDR_IA_CONFIG.md` - Documentação completa
+- `/root/backups/` - Backups criados
+
+### Contato para Suporte
+
+Entre em contato com o fornecedor do sistema para:
+- Suporte técnico
+- Atualizações
+- Customizações
+- Treinamento
 
 ---
 
-**Desenvolvido com ❤️ por [@eversonsantos-dev](https://github.com/eversonsantos-dev)**
+## 🔄 Atualizações
 
-**Versão:** v2.1.1 | **Status:** ✅ Estável e Validado em Produção
+### Como Atualizar para Nova Versão
+
+1. Backup automático será criado
+2. Extrair nova versão
+3. Executar `install.sh` novamente
+4. Seguir instruções específicas da versão
+
+---
+
+## ⚠️ Importante
+
+- Sempre mantenha backups atualizados
+- Teste em ambiente de homologação primeiro
+- Monitore logs após instalação
+- Entre em contato com suporte se houver dúvidas
+
+---
+
+**Versão:** v2.1.1  
+**Status:** ✅ Estável e Validado em Produção  
+**Última Atualização:** Novembro 2025
