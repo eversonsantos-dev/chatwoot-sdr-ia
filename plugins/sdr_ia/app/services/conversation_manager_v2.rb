@@ -45,21 +45,53 @@ module SdrIa
     end
 
     def build_conversation_history
+      # Buscar mensagens com todos os dados necessários (incluindo attachments)
       messages = conversation.messages
-        .where.not(content: nil)
-        .where.not(content: '')
         .order(created_at: :asc)
         .limit(30) # Últimas 30 mensagens
-        .pluck(:message_type, :content, :created_at)
 
       history = []
-      messages.each do |msg_type, content, created_at|
-        role = msg_type == 'incoming' ? 'user' : 'assistant'
-        history << {
-          role: role,
-          content: content,
-          timestamp: created_at
-        }
+
+      messages.each do |message|
+        # Pular mensagens vazias sem attachment
+        next if message.content.blank? && message.attachments.empty?
+
+        role = message.message_type == 'incoming' ? 'user' : 'assistant'
+        content = message.content
+
+        # Se a mensagem tiver attachments de áudio, transcrever
+        if message.content.blank? && message.attachments.present?
+          audio_attachment = message.attachments.find do |att|
+            att.file_type == 'audio' ||
+            att.content_type&.start_with?('audio/') ||
+            %w[.mp3 .m4a .wav .ogg .mpeg .mpga].any? { |ext| att.file&.filename&.to_s&.downcase&.end_with?(ext) }
+          end
+
+          if audio_attachment
+            Rails.logger.info "[SDR IA] [Audio] Detectado áudio na mensagem #{message.id}"
+
+            # Transcrever áudio
+            transcriber = SdrIa::AudioTranscriber.new(@account)
+            transcription = transcriber.transcribe_from_url(audio_attachment.download_url)
+
+            if transcription.present?
+              content = "[Áudio transcrito]: #{transcription}"
+              Rails.logger.info "[SDR IA] [Audio] ✅ Transcrição adicionada ao histórico"
+            else
+              content = "[Áudio não pôde ser transcrito]"
+              Rails.logger.warn "[SDR IA] [Audio] ⚠️ Falha na transcrição"
+            end
+          end
+        end
+
+        # Adicionar ao histórico apenas se tiver conteúdo
+        if content.present?
+          history << {
+            role: role,
+            content: content,
+            timestamp: message.created_at
+          }
+        end
       end
 
       history

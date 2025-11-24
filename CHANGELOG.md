@@ -7,6 +7,83 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
+## [2.1.1] - 2025-11-24 ✅ VERSÃO ESTÁVEL - LATEST
+
+### 🎯 Status da Versão
+- ✅ **VERSÃO ESTÁVEL E VALIDADA EM PRODUÇÃO**
+- ✅ **RECOMENDADA PARA PRODUÇÃO (LATEST)**
+- ✅ **TODOS OS TESTES PASSANDO**
+- 📅 **Data**: 24 de Novembro de 2025
+- 🔖 **Tag Git**: `v2.1.1`, `latest`
+- 🐳 **Imagem Docker**: `localhost/chatwoot-sdr-ia:v2.1.1-audio`
+
+### 🐛 Correção Crítica
+
+#### Transcrição de Áudio Não Funcionava
+**Problema:** Sistema de transcrição de áudio estava implementado mas não era chamado quando leads enviavam áudios.
+
+**Sintomas:**
+- ❌ Áudios do WhatsApp sendo ignorados
+- ❌ Nenhum log `[Audio]` aparecendo
+- ❌ IA não respondia a mensagens de áudio
+- ✅ `AudioTranscriber.rb` existia mas nunca era executado
+
+**Root Cause:**
+- **Arquivo:** `plugins/sdr_ia/app/services/conversation_manager_v2.rb:47-66`
+- **Problema:** Método `build_conversation_history()` usava `.pluck(:message_type, :content, :created_at)` que retorna apenas os campos especificados
+- **Consequência:** Não era possível acessar `message.attachments`, então áudios eram invisíveis
+
+**Código Bugado:**
+```ruby
+# LINHA 47-66 (ANTES):
+messages = conversation.messages
+  .where.not(content: nil)
+  .where.not(content: '')
+  .pluck(:message_type, :content, :created_at)  # ❌ Não busca attachments
+
+messages.each do |msg_type, content, created_at|
+  # Só processa texto...
+end
+```
+
+**Correção Aplicada:**
+```ruby
+# LINHA 47-98 (DEPOIS):
+messages = conversation.messages
+  .order(created_at: :asc)
+  .limit(30)  # Busca objetos Message completos
+
+messages.each do |message|
+  # Detecta áudio
+  if message.content.blank? && message.attachments.present?
+    audio_attachment = message.attachments.find { |att|
+      att.file_type == 'audio' ||
+      att.content_type&.start_with?('audio/')
+    }
+
+    if audio_attachment
+      transcriber = SdrIa::AudioTranscriber.new(@account)
+      transcription = transcriber.transcribe_from_url(audio_attachment.download_url)
+      content = "[Áudio transcrito]: #{transcription}"
+    end
+  end
+end
+```
+
+**Impacto:**
+- ✅ Áudios agora são detectados automaticamente
+- ✅ Transcrição via Whisper API funcional
+- ✅ IA responde baseada no conteúdo do áudio
+- ✅ Suporte a MP3, M4A, WAV, OGG (até 25MB)
+
+**Arquivos Modificados:**
+- `plugins/sdr_ia/app/services/conversation_manager_v2.rb` (linhas 47-98)
+
+**Documentação:**
+- `HOTFIX_v2.1.1-audio.md` - Análise técnica completa
+
+---
+
 ## [2.1.0] - 2025-11-24
 
 ### 🚀 Novos Recursos
