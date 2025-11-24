@@ -34,9 +34,12 @@ module SdrIa
       status = contact.custom_attributes['sdr_ia_status']
       return unless ['em_andamento', nil, ''].include?(status)
 
-      # Agendar job com delay de 2 segundos
-      QualifyLeadJob.set(wait: 2.seconds).perform_later(contact.id, conversation.id)
-      Rails.logger.info "[SDR IA] Job agendado para 2 segundos"
+      # MELHORIA: Usar buffer para agrupar mensagens consecutivas
+      # Exemplo: Lead manda "Oi", "Tudo bem?", "Pode me ajudar?" → agrupamos antes de responder
+      buffer = SdrIa::MessageBuffer.new(conversation.id)
+      buffer.add_message(message.id)
+
+      Rails.logger.info "[SDR IA] Mensagem adicionada ao buffer. Total no buffer: #{buffer.buffer_size}"
     rescue StandardError => e
       Rails.logger.error "[SDR IA] Erro em message_created: #{e.message}"
     end

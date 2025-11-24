@@ -89,16 +89,13 @@ module SdrIa
       response = client.generate_response(history, system_prompt)
 
       if response.present?
-        # GATILHO: Se a mensagem indica encerramento, NÃO enviar aqui
-        # A mensagem será enviada pelo send_closing_message após qualificação
+        send_message(response)
+        Rails.logger.info "[SDR IA] [V2] Resposta conversacional enviada"
+
+        # GATILHO: Se a mensagem indica encerramento, qualificar e atribuir automaticamente
         if response_indicates_handoff?(response)
           Rails.logger.info "[SDR IA] [V2] Mensagem de encerramento detectada! Iniciando qualificação automática..."
-          Rails.logger.info "[SDR IA] [V2] Pulando envio da resposta conversacional (será enviada após qualificação)"
           qualify_lead(history)
-        else
-          # Apenas envia se NÃO for mensagem de encerramento
-          send_message(response)
-          Rails.logger.info "[SDR IA] [V2] Resposta conversacional enviada"
         end
       else
         Rails.logger.error "[SDR IA] [V2] Falha ao gerar resposta, usando fallback"
@@ -156,13 +153,7 @@ module SdrIa
         assign_to_team(analysis)
 
         # Enviar mensagem de encerramento (DEPOIS da atribuição)
-        # EXCETO para leads QUENTES - a IA conversacional já enviou a mensagem adequada
-        unless analysis['temperatura'] == 'quente'
-          send_closing_message(analysis)
-          Rails.logger.info "[SDR IA] [V2] Mensagem de encerramento enviada: #{analysis['temperatura']}"
-        else
-          Rails.logger.info "[SDR IA] [V2] Lead QUENTE - pulando mensagem de encerramento (já enviada pela IA conversacional)"
-        end
+        # REMOVIDO: send_closing_message(analysis) - Mensagem automática desabilitada
 
         Rails.logger.info "[SDR IA] [V2] Qualificação completa: #{analysis['temperatura']} - Score: #{analysis['score']}"
       else
@@ -370,6 +361,19 @@ module SdrIa
       # REGRA UNIVERSAL: Leads QUENTES e MORNOS SEMPRE são atribuídos automaticamente
       return unless ['quente', 'morno'].include?(temperatura)
 
+      # MELHORIA v2.1.0: Usar Round Robin se habilitado
+      round_robin = RoundRobinAssigner.new(@account)
+
+      if round_robin.assign_conversation(conversation, temperatura)
+        Rails.logger.info "[SDR IA] [V2] ✅ Lead #{temperatura.upcase} atribuído via Round Robin"
+
+        # Criar nota privada para o closer
+        create_private_note_for_closer(analysis)
+
+        return
+      end
+
+      # FALLBACK: Sistema de times tradicional
       team_id = case temperatura
                 when 'quente'
                   @config.dig('teams', 'quente_team_id')

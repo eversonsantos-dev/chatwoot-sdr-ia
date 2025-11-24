@@ -1,0 +1,26 @@
+{
+  "version": "aa4bd4f",
+  "description": "Versão estável v2.0.0-patch2 - Última versão funcional antes dos patches 3-5",
+  "timestamp": "20251122_212036",
+  "date": "2025-11-22T21:20:36-03:00",
+  "git_commit": "aa4bd4f12b0eda7725cc4d1b3dc8a150ca8ca575",
+  "git_branch": "HEAD",
+  "backup_file": "backup_20251122_212036.tar.gz",
+  "backup_size": "116K",
+  "files_included": [
+    "plugins/sdr_ia/**/*",
+    "controllers/api/v1/accounts/sdr_ia/**/*",
+    "models/sdr_ia_config.rb",
+    "db/migrate/*sdr_ia*",
+    "config/initializers/sdr_ia.rb",
+    "config/routes.rb",
+    "patches/async_dispatcher.rb",
+    "frontend/routes/dashboard/settings/sdr-ia/**/*",
+    "Dockerfile",
+    "docker-compose.yml",
+    "rebuild.sh",
+    "deploy.sh",
+    "docs/**/*"
+  ],
+  "docker_images": {"repository":"localhost/chatwoot-sdr-ia","tag":"aa4bd4f","id":"51ea74f7dc6c","created":"2025-11-22 19:41:30 -0300 -03","size":"2.51GB"}
+}
