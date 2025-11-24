@@ -17,10 +17,16 @@ USER root
 # Copiar plugin SDR IA
 COPY plugins/sdr_ia /app/plugins/sdr_ia
 
-# Copiar ConversationManager (ambas versões)
+# Copiar Services (todos)
 COPY plugins/sdr_ia/app/services/conversation_manager.rb /app/plugins/sdr_ia/app/services/conversation_manager.rb
 COPY plugins/sdr_ia/app/services/conversation_manager_v2.rb /app/plugins/sdr_ia/app/services/conversation_manager_v2.rb
 COPY plugins/sdr_ia/app/services/openai_client.rb /app/plugins/sdr_ia/app/services/openai_client.rb
+COPY plugins/sdr_ia/app/services/message_buffer.rb /app/plugins/sdr_ia/app/services/message_buffer.rb
+COPY plugins/sdr_ia/app/services/audio_transcriber.rb /app/plugins/sdr_ia/app/services/audio_transcriber.rb
+COPY plugins/sdr_ia/app/services/round_robin_assigner.rb /app/plugins/sdr_ia/app/services/round_robin_assigner.rb
+
+# Copiar Jobs
+COPY plugins/sdr_ia/app/jobs/process_buffered_messages_job.rb /app/plugins/sdr_ia/app/jobs/process_buffered_messages_job.rb
 
 # Copiar controllers
 COPY controllers/api/v1/accounts/sdr_ia /app/app/controllers/api/v1/accounts/sdr_ia
@@ -32,6 +38,8 @@ COPY models/sdr_ia_config.rb /app/app/models/sdr_ia_config.rb
 COPY db/migrate/20251120100414_create_sdr_ia_configs.rb /app/db/migrate/20251120100414_create_sdr_ia_configs.rb
 COPY db/migrate/20251120152500_add_prompts_to_sdr_ia_configs.rb /app/db/migrate/20251120152500_add_prompts_to_sdr_ia_configs.rb
 COPY db/migrate/20251120230000_add_default_agent_to_sdr_ia_configs.rb /app/db/migrate/20251120230000_add_default_agent_to_sdr_ia_configs.rb
+COPY db/migrate/20251122160000_add_knowledge_base_to_sdr_ia_configs.rb /app/db/migrate/20251122160000_add_knowledge_base_to_sdr_ia_configs.rb
+COPY db/migrate/20251124000000_add_round_robin_to_sdr_ia_configs.rb /app/db/migrate/20251124000000_add_round_robin_to_sdr_ia_configs.rb
 
 # Copiar initializer
 COPY config/initializers/sdr_ia.rb /app/config/initializers/sdr_ia.rb

@@ -147,23 +147,26 @@ prompts:
     1. Identifique todas as informações disponíveis (explícitas ou IMPLÍCITAS)
     2. Calcule um score de qualificação (0-130) baseado em:
 
-       **INTERESSE (0-30 pontos):**
-       - Específico e claro (ex: "botox na testa") = 30 pontos
-       - Genérico mas definido (ex: "harmonização") = 20 pontos
-       - Vago (ex: "não sei ainda") = 0 pontos
+       **INTERESSE (0-50 pontos):** ⚠️ FATOR PRINCIPAL
+       - Específico e claro (ex: "botox na testa", "remoção de tatuagem") = 50 pontos
+       - Genérico mas definido (ex: "harmonização", "rejuvenescimento") = 40 pontos
+       - Vago mas tem interesse (ex: "quero melhorar a aparência") = 30 pontos
+       - SEM interesse real (ex: "só queria saber", "não tenho interesse") = 0 pontos
 
-       **URGÊNCIA (0-40 pontos):**
-       - Esta semana = 40 pontos
-       - Próximas 2 semanas = 30 pontos
+       ⚠️ REGRA CRÍTICA: Se o lead mencionou QUALQUER procedimento específico = no mínimo 40 pontos
+
+       **URGÊNCIA (0-30 pontos):**
+       - Esta semana = 30 pontos
+       - Próximas 2 semanas = 25 pontos
        - Até 30 dias = 20 pontos
-       - Acima de 30 dias = 10 pontos
-       - Só pesquisando = 0 pontos
+       - Acima de 30 dias = 15 pontos
+       - Só pesquisando mas demonstra interesse = 10 pontos
 
-       **CONHECIMENTO (0-30 pontos):**
-       - Já sabe valores e como funciona = 30 pontos
-       - Pesquisou um pouco = 20 pontos
+       **CONHECIMENTO (0-20 pontos):**
+       - Já sabe valores e como funciona = 20 pontos
+       - Pesquisou um pouco = 15 pontos
        - Primeira pesquisa = 10 pontos
-       - Não sabe nada = 0 pontos
+       - Não sabe nada mas quer saber = 5 pontos
 
        **LOCALIZAÇÃO (0-10 pontos):**
        - Bairro próximo (<15km) = 10 pontos
@@ -175,11 +178,17 @@ prompts:
        - Objetivo genérico (melhorar aparência) = 10 pontos
        - Sem motivação clara = 0 pontos
 
-    3. Determine a temperatura baseada no SCORE:
-       - 🔴 QUENTE (80-130 pontos): Alta intenção, pronto para começar
-       - 🟡 MORNO (50-79 pontos): Interesse moderado, precisa nutrição
-       - 🔵 FRIO (30-49 pontos): Baixa intenção, início de pesquisa
-       - ⚫ MUITO FRIO (0-29 pontos): Sem interesse real
+    3. Determine a temperatura baseada NO INTERESSE PRIMEIRO, depois no SCORE:
+
+       🚨 REGRA PRIMÁRIA (SEMPRE VERIFICAR PRIMEIRO):
+       - Se mencionou procedimento específico = NUNCA pode ser MUITO_FRIO
+       - Se disse claramente "não tenho interesse" = MUITO_FRIO independente do score
+
+       Depois, baseado no SCORE TOTAL:
+       - 🔴 QUENTE (90-130 pontos): Alta intenção, quer começar logo
+       - 🟡 MORNO (50-89 pontos): Interesse real, precisa nutrição
+       - 🔵 FRIO (20-49 pontos): Interesse vago ou muito inicial
+       - ⚫ MUITO FRIO (0-19 pontos): SEM interesse real nos procedimentos
 
     4. Sugira próximo passo:
        - QUENTE: "transferir_closer" - conectar AGORA com Pedro Zoia

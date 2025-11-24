@@ -153,7 +153,7 @@ module SdrIa
         assign_to_team(analysis)
 
         # Enviar mensagem de encerramento (DEPOIS da atribuição)
-        send_closing_message(analysis)
+        # REMOVIDO: send_closing_message(analysis) - Mensagem automática desabilitada
 
         Rails.logger.info "[SDR IA] [V2] Qualificação completa: #{analysis['temperatura']} - Score: #{analysis['score']}"
       else
@@ -361,6 +361,19 @@ module SdrIa
       # REGRA UNIVERSAL: Leads QUENTES e MORNOS SEMPRE são atribuídos automaticamente
       return unless ['quente', 'morno'].include?(temperatura)
 
+      # MELHORIA v2.1.0: Usar Round Robin se habilitado
+      round_robin = RoundRobinAssigner.new(@account)
+
+      if round_robin.assign_conversation(conversation, temperatura)
+        Rails.logger.info "[SDR IA] [V2] ✅ Lead #{temperatura.upcase} atribuído via Round Robin"
+
+        # Criar nota privada para o closer
+        create_private_note_for_closer(analysis)
+
+        return
+      end
+
+      # FALLBACK: Sistema de times tradicional
       team_id = case temperatura
                 when 'quente'
                   @config.dig('teams', 'quente_team_id')

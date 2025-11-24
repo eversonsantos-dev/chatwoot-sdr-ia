@@ -78,8 +78,21 @@ const settings = ref({
     reconduzir: {
       max_tentativas: 3,
       delay_segundos: 2
+    },
+    round_robin: {
+      enabled: false,
+      strategy: 'sequential', // sequential, random, weighted
+      closers: []
     }
   }
+});
+
+// Round Robin management
+const newCloser = ref({
+  name: '',
+  email: '',
+  priority: 'medium',
+  active: true
 });
 
 const testContactId = ref('');
@@ -92,7 +105,8 @@ const tabs = [
   { id: 'knowledge', label: 'Base de Conhecimento', icon: '📚' },
   { id: 'prompts', label: 'Prompts da IA', icon: '🤖' },
   { id: 'questions', label: 'Perguntas por Etapa', icon: '❓' },
-  { id: 'scoring', label: 'Sistema de Scoring', icon: '📊' }
+  { id: 'scoring', label: 'Sistema de Scoring', icon: '📊' },
+  { id: 'round-robin', label: 'Round Robin', icon: '🔄' }
 ];
 
 // Load settings
@@ -199,6 +213,36 @@ const addProcedimento = () => {
 
 const removeProcedimento = (index) => {
   settings.value.sdr_ia.procedimentos.splice(index, 1);
+};
+
+// Round Robin management
+const addCloser = () => {
+  if (newCloser.value.name.trim() && newCloser.value.email.trim()) {
+    if (!settings.value.sdr_ia.round_robin.closers) {
+      settings.value.sdr_ia.round_robin.closers = [];
+    }
+    settings.value.sdr_ia.round_robin.closers.push({
+      name: newCloser.value.name.trim(),
+      email: newCloser.value.email.trim(),
+      priority: newCloser.value.priority,
+      active: true
+    });
+    // Reset form
+    newCloser.value = {
+      name: '',
+      email: '',
+      priority: 'medium',
+      active: true
+    };
+  }
+};
+
+const removeCloser = (index) => {
+  settings.value.sdr_ia.round_robin.closers.splice(index, 1);
+};
+
+const toggleCloserActive = (index) => {
+  settings.value.sdr_ia.round_robin.closers[index].active = !settings.value.sdr_ia.round_robin.closers[index].active;
 };
 
 onMounted(() => {
@@ -952,6 +996,183 @@ R: Maioria dos procedimentos não requer afastamento"
                   />
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Round Robin -->
+      <div v-show="activeTab === 'round-robin'" class="space-y-6">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+            🔄 Sistema Round Robin para Distribuição de Leads
+          </h3>
+
+          <p class="text-sm text-slate-600 dark:text-slate-400 mb-6">
+            Configure a distribuição automática de leads qualificados entre seus closers.
+            Cada lead qualificado será atribuído automaticamente a um closer diferente.
+          </p>
+
+          <div class="space-y-6">
+            <!-- Habilitar Round Robin -->
+            <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+              <div>
+                <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Ativar Round Robin
+                </h4>
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  Quando ativado, leads são distribuídos automaticamente entre closers
+                </p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  v-model="settings.sdr_ia.round_robin.enabled"
+                  type="checkbox"
+                  class="sr-only peer"
+                />
+                <div class="w-11 h-6 bg-slate-300 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <!-- Estratégia de Distribuição -->
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                📋 Estratégia de Distribuição
+              </label>
+              <select
+                v-model="settings.sdr_ia.round_robin.strategy"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+              >
+                <option value="sequential">Sequencial (um por vez na ordem)</option>
+                <option value="random">Aleatório</option>
+                <option value="weighted">Ponderado (por prioridade)</option>
+              </select>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                • <strong>Sequencial:</strong> Distribui na ordem da lista<br>
+                • <strong>Aleatório:</strong> Escolhe aleatoriamente<br>
+                • <strong>Ponderado:</strong> Leads quentes vão para closers de alta prioridade
+              </p>
+            </div>
+
+            <!-- Lista de Closers -->
+            <div>
+              <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                👥 Closers Cadastrados
+              </h4>
+
+              <div v-if="settings.sdr_ia.round_robin.closers.length > 0" class="space-y-2 mb-4">
+                <div
+                  v-for="(closer, index) in settings.sdr_ia.round_robin.closers"
+                  :key="index"
+                  class="flex items-center justify-between p-3 border rounded-lg"
+                  :class="closer.active ? 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 opacity-60'"
+                >
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      {{ closer.name }}
+                    </p>
+                    <p class="text-xs text-slate-600 dark:text-slate-400">
+                      {{ closer.email }}
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="px-2 py-1 text-xs rounded"
+                      :class="{
+                        'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200': closer.priority === 'high',
+                        'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200': closer.priority === 'medium',
+                        'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200': closer.priority === 'low'
+                      }"
+                    >
+                      {{ closer.priority === 'high' ? 'Alta' : closer.priority === 'medium' ? 'Média' : 'Baixa' }}
+                    </span>
+                    <button
+                      @click="toggleCloserActive(index)"
+                      class="px-2 py-1 text-xs rounded"
+                      :class="closer.active ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'"
+                    >
+                      {{ closer.active ? 'Ativo' : 'Inativo' }}
+                    </button>
+                    <button
+                      @click="removeCloser(index)"
+                      class="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded hover:bg-red-200 dark:hover:bg-red-900/50"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-center">
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  Nenhum closer cadastrado ainda.
+                </p>
+              </div>
+
+              <!-- Adicionar Novo Closer -->
+              <div class="mt-4 p-4 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700/30">
+                <h5 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                  ➕ Adicionar Novo Closer
+                </h5>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-700 dark:text-slate-300 mb-1">
+                      Nome
+                    </label>
+                    <input
+                      v-model="newCloser.name"
+                      type="text"
+                      placeholder="Ex: João Silva"
+                      class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-700 dark:text-slate-300 mb-1">
+                      Email
+                    </label>
+                    <input
+                      v-model="newCloser.email"
+                      type="email"
+                      placeholder="joao@empresa.com"
+                      class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-700 dark:text-slate-300 mb-1">
+                      Prioridade
+                    </label>
+                    <select
+                      v-model="newCloser.priority"
+                      class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                    >
+                      <option value="high">Alta (leads quentes)</option>
+                      <option value="medium">Média</option>
+                      <option value="low">Baixa (leads frios)</option>
+                    </select>
+                  </div>
+                  <div class="flex items-end">
+                    <button
+                      @click="addCloser"
+                      class="w-full px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors text-sm"
+                    >
+                      Adicionar Closer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dicas -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <p class="text-sm text-blue-800 dark:text-blue-200 font-semibold mb-2">
+                💡 Dicas de Uso
+              </p>
+              <ul class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                <li>• Os emails devem ser de usuários existentes no Chatwoot</li>
+                <li>• Closers inativos não recebem novos leads</li>
+                <li>• Estratégia "Ponderado" requer configuração de prioridade</li>
+                <li>• Sistema faz fallback para times se Round Robin falhar</li>
+              </ul>
             </div>
           </div>
         </div>

@@ -49,6 +49,11 @@ class SdrIaConfig < ApplicationRecord
         'reconduzir' => {
           'max_tentativas' => max_tentativas_reconduzir,
           'delay_segundos' => delay_reconduzir_segundos
+        },
+        'round_robin' => {
+          'enabled' => enable_round_robin,
+          'strategy' => round_robin_strategy,
+          'closers' => round_robin_closers || []
         }
       }
     }
@@ -80,7 +85,10 @@ class SdrIaConfig < ApplicationRecord
       morno_team_id: params.dig(:sdr_ia, :teams, :morno_team_id),
       procedimentos: params.dig(:sdr_ia, :procedimentos),
       max_tentativas_reconduzir: params.dig(:sdr_ia, :reconduzir, :max_tentativas),
-      delay_reconduzir_segundos: params.dig(:sdr_ia, :reconduzir, :delay_segundos)
+      delay_reconduzir_segundos: params.dig(:sdr_ia, :reconduzir, :delay_segundos),
+      enable_round_robin: params.dig(:sdr_ia, :round_robin, :enabled),
+      round_robin_strategy: params.dig(:sdr_ia, :round_robin, :strategy),
+      round_robin_closers: params.dig(:sdr_ia, :round_robin, :closers)
     )
   end
 end

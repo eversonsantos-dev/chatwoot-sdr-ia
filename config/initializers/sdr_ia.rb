@@ -23,7 +23,11 @@ Rails.application.config.to_prepare do
         require Rails.root.join('plugins/sdr_ia/app/services/lead_qualifier')
         require Rails.root.join('plugins/sdr_ia/app/services/conversation_manager')
         require Rails.root.join('plugins/sdr_ia/app/services/conversation_manager_v2')
+        require Rails.root.join('plugins/sdr_ia/app/services/message_buffer')
+        require Rails.root.join('plugins/sdr_ia/app/services/audio_transcriber')
+        require Rails.root.join('plugins/sdr_ia/app/services/round_robin_assigner')
         require Rails.root.join('plugins/sdr_ia/app/jobs/qualify_lead_job')
+        require Rails.root.join('plugins/sdr_ia/app/jobs/process_buffered_messages_job')
         require Rails.root.join('plugins/sdr_ia/app/listeners/sdr_ia_listener')
 
         Rails.logger.info "[SDR IA] Classes carregadas. Listener será registrado pelo AsyncDispatcher."
