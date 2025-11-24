@@ -103,6 +103,26 @@ O **SDR IA Module** é um plugin modular e não-invasivo para Chatwoot que autom
 
 ## 📦 Instalação
 
+### ⚡ Instalação Rápida (1 Comando)
+
+**Instale em qualquer servidor Chatwoot com um único comando:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eversonsantos-dev/chatwoot-sdr-ia/main/install.sh | sudo bash
+```
+
+O script irá:
+- ✅ Detectar automaticamente seu Chatwoot
+- ✅ Criar backup completo antes de instalar
+- ✅ Baixar e instalar o plugin SDR IA v2.1.1
+- ✅ Configurar variáveis de ambiente
+- ✅ Executar migrations (se instalação local)
+- ✅ Criar documentação de configuração
+
+**📚 Guia completo:** [INSTALACAO.md](INSTALACAO.md)
+
+---
+
 ### Método 1: Docker Build ⭐ (Recomendado para Produção)
 
 **Método mais profissional e fácil de manter!**
