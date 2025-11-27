@@ -26,6 +26,17 @@ else
   echo "[OK] Migrations atualizadas!"
 fi
 
+# Instalar Custom Attributes do SDR IA (apenas no container principal, não no sidekiq)
+if echo "$@" | grep -q "rails s"; then
+  echo "[INFO] Instalando Custom Attributes do SDR IA..."
+  if [ -f /app/plugins/sdr_ia/install.rb ]; then
+    bundle exec rails runner /app/plugins/sdr_ia/install.rb 2>/dev/null || echo "[WARN] Custom Attributes podem já existir"
+    echo "[OK] Custom Attributes verificados!"
+  else
+    echo "[WARN] Arquivo install.rb não encontrado"
+  fi
+fi
+
 echo "=========================================="
 echo " Chatwoot SDR IA - Pronto!"
 echo "=========================================="

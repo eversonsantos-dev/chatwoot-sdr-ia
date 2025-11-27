@@ -7,6 +7,50 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
+## [3.1.4] - 2025-11-27 - CORRECAO CUSTOM ATTRIBUTES
+
+### Status da Versao
+- **VERSAO ESTAVEL**
+- **RECOMENDADA PARA PRODUCAO (LATEST)**
+- Data: 27 de Novembro de 2025
+- Tag Git: `v3.1.4`
+- Docker Hub: `eversonsantosdev/chatwoot-sdr-ia:3.1.4` e `:latest`
+
+### Correcoes
+
+#### Custom Attributes do SDR IA
+**Problema:**
+- Atributos personalizados do SDR IA nao eram criados automaticamente
+- Campos como temperatura, score, status nao apareciam nos contatos
+
+**Causa:**
+- O script `install.rb` nao era executado no startup do container
+
+**Solucao:**
+- Entrypoint atualizado para executar `install.rb` automaticamente
+- Custom Attributes sao criados na primeira inicializacao
+- Execucao apenas no container principal (rails s), nao no sidekiq
+
+**Atributos Criados Automaticamente:**
+```
+sdr_ia_status        - Status da qualificacao (em_andamento, qualificado, etc)
+sdr_ia_progresso     - Progresso (ex: 3/6)
+sdr_ia_temperatura   - Temperatura do lead (quente, morno, frio, muito_frio)
+sdr_ia_score         - Score de 0-100
+sdr_ia_nome          - Nome extraido pela IA
+sdr_ia_interesse     - Procedimento de interesse
+sdr_ia_urgencia      - Urgencia do lead
+sdr_ia_conhecimento  - Nivel de conhecimento
+sdr_ia_motivacao     - Motivacao/objetivo
+sdr_ia_localizacao   - Localizacao
+sdr_ia_comportamento - Comportamento (cooperativo, evasivo, resistente)
+sdr_ia_resumo        - Resumo para o closer
+sdr_ia_proximo_passo - Proxima acao recomendada
+estagio_funil        - Estagio do funil de vendas
+```
+
+---
+
 ## [3.1.3] - 2025-11-27 - VERSAO ESTAVEL FINAL
 
 ### Status da Versao
