@@ -16,7 +16,7 @@ USER root
 
 # Instalar Node.js e pnpm
 RUN apk add --no-cache nodejs npm && \
-    npm install -g pnpm@9.0.4
+    npm install -g pnpm@10.2.0
 
 WORKDIR /app
 
