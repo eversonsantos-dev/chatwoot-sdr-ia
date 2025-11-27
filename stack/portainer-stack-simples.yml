@@ -1,0 +1,161 @@
+# ============================================================
+# CHATWOOT SDR IA - Stack SIMPLES para Portainer
+# ============================================================
+#
+# INSTRUÇÕES:
+# 1. Copie este arquivo
+# 2. Preencha os 3 campos marcados com <PREENCHA_AQUI>
+# 3. Cole no Portainer → Stacks → Add Stack
+# 4. Clique em Deploy
+#
+# ============================================================
+
+version: '3.8'
+
+services:
+  # ========================================
+  # CHATWOOT APP
+  # ========================================
+  chatwoot_app:
+    image: eversonsantosdev/chatwoot-sdr-ia:latest
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    entrypoint: docker/entrypoints/rails.sh
+    environment:
+      - RAILS_ENV=production
+      - NODE_ENV=production
+      - INSTALLATION_ENV=docker
+      - RAILS_LOG_TO_STDOUT=true
+      # =====================================
+      # BANCO DE DADOS (não precisa mudar)
+      # =====================================
+      - POSTGRES_HOST=chatwoot_postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=chatwoot_production
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=SenhaForte123!
+      # =====================================
+      # REDIS (não precisa mudar)
+      # =====================================
+      - REDIS_URL=redis://chatwoot_redis:6379
+      # =====================================
+      # 🔴 PREENCHA ESTES 2 CAMPOS:
+      # =====================================
+      - SECRET_KEY_BASE=<PREENCHA_AQUI_1>
+      - FRONTEND_URL=https://chat.atn.nexusatemporal.com
+      # =====================================
+      - DEFAULT_LOCALE=pt_BR
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - chatwoot_network
+      - network_public
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.chatwoot.rule=Host(`chat.atn.nexusatemporal.com`)
+        - traefik.http.routers.chatwoot.entrypoints=websecure
+        - traefik.http.routers.chatwoot.tls.certresolver=letsencryptresolver
+        - traefik.http.services.chatwoot.loadbalancer.server.port=3000
+    depends_on:
+      - chatwoot_postgres
+      - chatwoot_redis
+
+  # ========================================
+  # CHATWOOT SIDEKIQ (Jobs em background)
+  # ========================================
+  chatwoot_sidekiq:
+    image: eversonsantosdev/chatwoot-sdr-ia:latest
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      - RAILS_ENV=production
+      - NODE_ENV=production
+      - INSTALLATION_ENV=docker
+      - RAILS_LOG_TO_STDOUT=true
+      - POSTGRES_HOST=chatwoot_postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=chatwoot_production
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=SenhaForte123!
+      - REDIS_URL=redis://chatwoot_redis:6379
+      # =====================================
+      # 🔴 COPIE O MESMO SECRET_KEY_BASE:
+      # =====================================
+      - SECRET_KEY_BASE=<PREENCHA_AQUI_1>
+      - FRONTEND_URL=https://chat.atn.nexusatemporal.com
+      - DEFAULT_LOCALE=pt_BR
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - chatwoot_network
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    depends_on:
+      - chatwoot_postgres
+      - chatwoot_redis
+
+  # ========================================
+  # POSTGRESQL (Banco de dados)
+  # ========================================
+  chatwoot_postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      - POSTGRES_DB=chatwoot_production
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=SenhaForte123!
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chatwoot_network
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+
+  # ========================================
+  # REDIS (Cache)
+  # ========================================
+  chatwoot_redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - chatwoot_network
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+# ========================================
+# REDES
+# ========================================
+networks:
+  chatwoot_network:
+    driver: overlay
+    attachable: true
+  network_public:
+    external: true
+
+# ========================================
+# VOLUMES (armazenamento)
+# ========================================
+volumes:
+  postgres_data:
+  redis_data:
+  chatwoot_storage:
