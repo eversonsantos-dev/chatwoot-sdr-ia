@@ -30,7 +30,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DATABASE=chatwoot_production
       - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ChatwootDB2024!}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ChatwootDB2024Seguro}
 
       # === Redis ===
       - REDIS_URL=redis://chatwoot_redis:6379
@@ -79,7 +79,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DATABASE=chatwoot_production
       - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ChatwootDB2024!}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ChatwootDB2024Seguro}
       - REDIS_URL=redis://chatwoot_redis:6379
       - SECRET_KEY_BASE=${SECRET_KEY_BASE}
       - FRONTEND_URL=${FRONTEND_URL}
@@ -103,11 +103,11 @@ services:
   # POSTGRESQL
   # ========================================
   chatwoot_postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       - POSTGRES_DB=chatwoot_production
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ChatwootDB2024!}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ChatwootDB2024Seguro}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

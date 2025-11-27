@@ -1,0 +1,104 @@
+version: "3.8"
+
+services:
+  chatwoot_app:
+    image: eversonsantosdev/chatwoot-sdr-ia:3.0.1
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    environment:
+      RAILS_ENV: production
+      NODE_ENV: production
+      INSTALLATION_ENV: docker
+      RAILS_LOG_TO_STDOUT: "true"
+      POSTGRES_HOST: chatwoot_postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DATABASE: chatwoot_production
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: ChatwootDB2024Seguro
+      REDIS_URL: redis://chatwoot_redis:6379
+      SECRET_KEY_BASE: a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678901234567890abcdef1234567890abcdef12345678
+      FRONTEND_URL: https://chat.atn.nexusatemporal.com
+      DEFAULT_LOCALE: pt_BR
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - chatwoot_internal
+      - network_public
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.chatwoot.rule=Host(`chat.atn.nexusatemporal.com`)
+        - traefik.http.routers.chatwoot.entrypoints=websecure
+        - traefik.http.routers.chatwoot.tls.certresolver=letsencryptresolver
+        - traefik.http.services.chatwoot.loadbalancer.server.port=3000
+
+  chatwoot_sidekiq:
+    image: eversonsantosdev/chatwoot-sdr-ia:3.0.1
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      RAILS_ENV: production
+      NODE_ENV: production
+      INSTALLATION_ENV: docker
+      RAILS_LOG_TO_STDOUT: "true"
+      POSTGRES_HOST: chatwoot_postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DATABASE: chatwoot_production
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: ChatwootDB2024Seguro
+      REDIS_URL: redis://chatwoot_redis:6379
+      SECRET_KEY_BASE: a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678901234567890abcdef1234567890abcdef12345678
+      FRONTEND_URL: https://chat.atn.nexusatemporal.com
+      DEFAULT_LOCALE: pt_BR
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  chatwoot_postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: chatwoot_production
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ChatwootDB2024Seguro
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+
+  chatwoot_redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+
+networks:
+  chatwoot_internal:
+    driver: overlay
+  network_public:
+    external: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  chatwoot_storage:
