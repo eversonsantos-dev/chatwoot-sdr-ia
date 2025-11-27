@@ -2,7 +2,7 @@
 # Chatwoot SDR IA - Docker Image
 # ============================================================
 # Imagem: Chatwoot original + Módulo SDR IA
-# Versão: 3.0.0
+# Versão: 3.1.0
 # ============================================================
 
 ARG CHATWOOT_VERSION=v4.1.0
@@ -10,7 +10,7 @@ FROM chatwoot/chatwoot:${CHATWOOT_VERSION}
 
 LABEL maintainer="eversonsantos-dev"
 LABEL description="Chatwoot with SDR IA Module"
-LABEL version="3.0.0"
+LABEL version="3.1.0"
 
 USER root
 
@@ -59,6 +59,20 @@ COPY frontend/settings.routes.js /app/app/javascript/dashboard/routes/dashboard/
 COPY frontend/sidebar-settings.js /app/app/javascript/dashboard/components/layout/config/sidebarItems/settings.js
 
 # ============================================================
+# RECOMPILAR ASSETS COM SDR IA
+# ============================================================
+
+# Instalar dependências Node e recompilar assets
+WORKDIR /app
+
+# Reinstalar dependências e compilar
+RUN corepack enable && corepack prepare pnpm@9.0.4 --activate && \
+    pnpm install --frozen-lockfile && \
+    SECRET_KEY_BASE=precompile_placeholder RAILS_ENV=production \
+    bundle exec rake assets:precompile && \
+    rm -rf node_modules tmp/cache
+
+# ============================================================
 # ENTRYPOINT PERSONALIZADO
 # ============================================================
 
@@ -73,6 +87,8 @@ RUN chown -R chatwoot:chatwoot /app/plugins /app/tmp /app/log /app/db/migrate 2>
 RUN echo "=== SDR IA Module ===" && \
     ls -la /app/plugins/sdr_ia/ && \
     ls -la /app/db/migrate/ | grep sdr && \
+    echo "=== Verificando assets compilados ===" && \
+    ls -la /app/public/vite/assets/ | head -10 && \
     echo "=== OK ==="
 
 WORKDIR /app
