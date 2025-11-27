@@ -1,0 +1,160 @@
+# ============================================================
+# GitHub Actions - Build e Push da Imagem Docker
+# ============================================================
+# Este workflow automatiza:
+# - Build da imagem Docker
+# - Push para Docker Hub
+# - Criação de Release no GitHub
+#
+# Triggers:
+# - Push de tags (v*.*.*) - Ex: v2.1.0, v2.1.1
+# - Manual via workflow_dispatch
+# ============================================================
+
+name: Build and Push Docker Image
+
+on:
+  # Trigger automático quando criar uma tag
+  push:
+    tags:
+      - 'v*.*.*'
+
+  # Trigger manual (botão no GitHub)
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão da imagem (ex: 2.1.1)'
+        required: true
+        default: 'latest'
+      chatwoot_version:
+        description: 'Versão do Chatwoot base (ex: v4.1.0)'
+        required: true
+        default: 'v4.1.0'
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: eversonsantosdev/chatwoot-sdr-ia
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      # ========================================
+      # 1. Checkout do código
+      # ========================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ========================================
+      # 2. Setup Docker Buildx (para multi-platform)
+      # ========================================
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ========================================
+      # 3. Login no Docker Hub
+      # ========================================
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ========================================
+      # 4. Extrair metadata (tags, labels)
+      # ========================================
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            # Tag semântica completa (v2.1.0)
+            type=semver,pattern={{version}}
+            # Tag major.minor (v2.1)
+            type=semver,pattern={{major}}.{{minor}}
+            # Tag major (v2)
+            type=semver,pattern={{major}}
+            # Tag latest para a branch main
+            type=raw,value=latest,enable={{is_default_branch}}
+            # Tag manual se usado workflow_dispatch
+            type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
+
+      # ========================================
+      # 5. Determinar versão do Chatwoot
+      # ========================================
+      - name: Set Chatwoot version
+        id: chatwoot
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.chatwoot_version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=v4.1.0" >> $GITHUB_OUTPUT
+          fi
+
+      # ========================================
+      # 6. Build e Push da imagem
+      # ========================================
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            CHATWOOT_VERSION=${{ steps.chatwoot.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      # ========================================
+      # 7. Criar Release no GitHub (apenas para tags)
+      # ========================================
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          body: |
+            ## Chatwoot SDR IA ${{ github.ref_name }}
+
+            ### Docker Image
+            ```bash
+            docker pull eversonsantosdev/chatwoot-sdr-ia:${{ github.ref_name }}
+            ```
+
+            ### Atualização
+            Para atualizar sua instalação:
+            ```bash
+            docker service update --image eversonsantosdev/chatwoot-sdr-ia:${{ github.ref_name }} chatwoot_app
+            docker service update --image eversonsantosdev/chatwoot-sdr-ia:${{ github.ref_name }} chatwoot_sidekiq
+            ```
+
+            ### Changelog
+            Veja o arquivo CHANGELOG.md para detalhes das mudanças.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ========================================
+      # 8. Sumário do build
+      # ========================================
+      - name: Build Summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Image Tags" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Command" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull eversonsantosdev/chatwoot-sdr-ia:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
