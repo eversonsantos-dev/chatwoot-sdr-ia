@@ -59,7 +59,9 @@ services:
         - traefik.http.routers.chatwoot.rule=Host(`${CHATWOOT_DOMAIN}`)
         - traefik.http.routers.chatwoot.entrypoints=websecure
         - traefik.http.routers.chatwoot.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.chatwoot.service=chatwoot
         - traefik.http.services.chatwoot.loadbalancer.server.port=3000
+        - traefik.swarm.network=network_public
     depends_on:
       - chatwoot_postgres
       - chatwoot_redis

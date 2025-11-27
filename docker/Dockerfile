@@ -37,7 +37,7 @@ FROM chatwoot/chatwoot:${CHATWOOT_VERSION}
 
 LABEL maintainer="eversonsantos-dev"
 LABEL description="Chatwoot with SDR IA Module"
-LABEL version="3.1.0"
+LABEL version="3.1.3"
 
 USER root
 

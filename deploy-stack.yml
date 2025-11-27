@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   chatwoot_app:
-    image: eversonsantosdev/chatwoot-sdr-ia:3.1.2
+    image: eversonsantosdev/chatwoot-sdr-ia:3.1.3
     command: bundle exec rails s -p 3000 -b 0.0.0.0
     environment:
       RAILS_ENV: production
@@ -35,10 +35,12 @@ services:
         - traefik.http.routers.chatwoot.rule=Host(`chat.atn.nexusatemporal.com`)
         - traefik.http.routers.chatwoot.entrypoints=websecure
         - traefik.http.routers.chatwoot.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.chatwoot.service=chatwoot
         - traefik.http.services.chatwoot.loadbalancer.server.port=3000
+        - traefik.swarm.network=network_public
 
   chatwoot_sidekiq:
-    image: eversonsantosdev/chatwoot-sdr-ia:3.1.2
+    image: eversonsantosdev/chatwoot-sdr-ia:3.1.3
     command: bundle exec sidekiq -C config/sidekiq.yml
     environment:
       RAILS_ENV: production

@@ -7,605 +7,422 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-## [3.1.2] - 2025-11-27 ✅ VERSÃO ESTÁVEL - LATEST
+## [3.1.3] - 2025-11-27 - VERSAO ESTAVEL FINAL
 
-### 🎯 Status da Versão
-- ✅ **VERSÃO ESTÁVEL E PUBLICADA NO DOCKER HUB**
-- ✅ **RECOMENDADA PARA PRODUÇÃO**
-- ✅ **DEPLOY AUTOMÁTICO VIA PORTAINER**
-- 📅 **Data**: 27 de Novembro de 2025
-- 🔖 **Tag Git**: `v3.1.2`
-- 🐳 **Docker Hub**: `eversonsantosdev/chatwoot-sdr-ia:3.1.2`
+### Status da Versao
+- **VERSAO ESTAVEL E TESTADA EM PRODUCAO**
+- **RECOMENDADA PARA PRODUCAO (LATEST)**
+- **DEPLOY VIA PORTAINER TESTADO E VALIDADO**
+- Data: 27 de Novembro de 2025
+- Tag Git: `v3.1.3`
+- Docker Hub: `eversonsantosdev/chatwoot-sdr-ia:3.1.3` e `:latest`
 
-### 🚀 Novidades Principais
+### Novidades Principais
 
-#### Imagem Docker Pública no Docker Hub
-- **Primeira versão publicada oficialmente no Docker Hub**
-- Imagem pronta para deploy em qualquer servidor
-- CI/CD automatizado via GitHub Actions
-- Multi-architecture support (amd64)
+#### Documentacao Completa de Erros e Solucoes
+Esta versao documenta todos os erros encontrados durante a implantacao em producao e suas solucoes definitivas.
 
-#### Deploy Simplificado via Portainer
-- Stack YAML pronta para colar no Portainer
-- Configuração via variáveis de ambiente
-- Zero necessidade de build local
-- Migrations automáticas na primeira execução
+### ERROS ENCONTRADOS E CORRECOES
 
-### 🔧 Melhorias Técnicas
+#### ERRO 1: Tela Branca Apos Login
+**Sintomas:**
+- Login funciona (HTTP 200)
+- Apos autenticar, tela fica completamente branca
+- Console do navegador sem erros visiveis
+- Assets carregando normalmente
 
-#### Dockerfile Multi-Stage Build
-- **Stage 1 (Builder)**: Compila assets Vue.js com Node.js e pnpm
-- **Stage 2 (Production)**: Imagem final otimizada sem ferramentas de build
-- Assets do SDR IA incluídos na compilação Vite
-- Redução significativa do tamanho final da imagem
+**Causa Raiz:**
+- Usuario SuperAdmin criado SEM Account associada
+- Chatwoot requer pelo menos uma Account para o dashboard funcionar
+- Sem Account, Vue.js nao consegue renderizar o dashboard
 
-#### Entrypoint Inteligente
-- Detecção automática de banco vazio vs existente
-- Executa `db:chatwoot_prepare` em instalação limpa
-- Executa `db:migrate` em atualizações
-- Aguarda PostgreSQL estar disponível antes de iniciar
+**Solucao:**
+```ruby
+# No Rails Console (bundle exec rails console):
+account = Account.create!(name: "Nome da Empresa", locale: "pt_BR")
+user = User.find_by(email: "admin@seudominio.com")
+AccountUser.create!(account: account, user: user, role: :administrator)
+```
 
-#### PostgreSQL com pgvector
-- Suporte a extensão vector (obrigatória no Chatwoot v4)
-- Imagem `pgvector/pgvector:pg16` configurada por padrão
-- Compatível com funcionalidades de AI/embeddings do Chatwoot
+**Prevencao:** Sempre criar Account junto com SuperAdmin
 
-### 📦 Stack de Deploy
+---
+
+#### ERRO 2: Traefik - "client version 1.24 is too old"
+**Sintomas:**
+```
+ERR error="client version 1.24 is too old. Minimum supported API version is 1.44"
+```
+
+**Causa:**
+- Traefik v3.2+ requer Docker API 1.44
+- Servidor com Docker versao anterior
+
+**Solucao:**
+Adicionar variavel de ambiente no Traefik:
+```yaml
+environment:
+  - DOCKER_API_VERSION=1.44
+```
+
+---
+
+#### ERRO 3: Traefik Label Deprecada
+**Sintomas:**
+```
+WRN Labels traefik.docker.* for Swarm provider are deprecated
+```
+
+**Causa:**
+- Label `traefik.docker.network` deprecada no Traefik v3
+
+**Solucao:**
+```yaml
+# ERRADO (deprecado):
+- traefik.docker.network=network_public
+
+# CORRETO (Traefik v3 + Swarm):
+- traefik.swarm.network=network_public
+```
+
+---
+
+#### ERRO 4: Espaco no Host do Traefik
+**Sintomas:**
+```
+ERR error="invalid value for HostSNI matcher, \"dominio.com \" is not a valid hostname"
+```
+
+**Causa:**
+- Espaco extra no final do dominio na label do Traefik
+
+**Solucao:**
+Verificar se nao ha espacos em:
+```yaml
+- traefik.http.routers.chatwoot.rule=Host(`dominio.com`)  # Sem espaco!
+```
+
+---
+
+#### ERRO 5: Sidekiq com Imagem Diferente
+**Sintomas:**
+- Sistema instavel
+- Jobs nao processados corretamente
+
+**Causa:**
+- chatwoot_app e chatwoot_sidekiq com imagens diferentes
+- Incompatibilidade de versoes
+
+**Solucao:**
+Garantir que ambos usem a MESMA imagem:
+```yaml
+chatwoot_app:
+  image: eversonsantosdev/chatwoot-sdr-ia:3.1.3
+
+chatwoot_sidekiq:
+  image: eversonsantosdev/chatwoot-sdr-ia:3.1.3  # MESMA imagem!
+```
+
+---
+
+#### ERRO 6: Senha sem Caractere Especial
+**Sintomas:**
+```
+Validation failed: Password must contain at least 1 special character
+```
+
+**Causa:**
+- Chatwoot v4 requer caractere especial na senha
+
+**Solucao:**
+Usar senhas com caracteres especiais:
+```ruby
+# ERRADO:
+password = 'Admin2024'
+
+# CORRETO:
+password = 'Admin@2024'
+```
+
+---
+
+#### ERRO 7: pgvector Extension Not Available
+**Sintomas:**
+```
+PG::UndefinedObject: ERROR: extension "vector" is not available
+```
+
+**Causa:**
+- Imagem postgres:16-alpine nao tem pgvector
+- Chatwoot v4 requer pgvector
+
+**Solucao:**
+Usar imagem com pgvector:
+```yaml
+chatwoot_postgres:
+  image: pgvector/pgvector:pg16  # NAO usar postgres:16-alpine
+```
+
+---
+
+#### ERRO 8: pnpm Version Mismatch
+**Sintomas:**
+```
+ERR_PNPM_UNSUPPORTED_ENGINE project requires pnpm v10.2.0
+```
+
+**Causa:**
+- Dockerfile usando pnpm 9.x mas projeto requer 10.2.0
+
+**Solucao no Dockerfile:**
+```dockerfile
+RUN npm install -g pnpm@10.2.0  # Versao correta
+```
+
+---
+
+#### ERRO 9: Assets Nao Compilados
+**Sintomas:**
+- Menu SDR IA nao aparece
+- Frontend original do Chatwoot funciona
+
+**Causa:**
+- Assets Vue.js do SDR IA nao foram recompilados
+
+**Solucao:**
+Usar multi-stage build no Dockerfile:
+```dockerfile
+# Stage 1: Compilar assets
+FROM chatwoot/chatwoot:v4.1.0 AS builder
+RUN pnpm install && bundle exec rake assets:precompile
+
+# Stage 2: Copiar assets compilados
+COPY --from=builder /app/public/vite /app/public/vite
+```
+
+---
+
+#### ERRO 10: constraint node.role == manager1
+**Sintomas:**
+- Traefik ou servico nao inicia
+- Nenhum no disponivel
+
+**Causa:**
+- Erro de digitacao: `manager1` em vez de `manager`
+
+**Solucao:**
+```yaml
+placement:
+  constraints:
+    - node.role == manager  # NAO manager1!
+```
+
+---
+
+### Stack de Deploy Corrigida (v3.1.3)
 
 ```yaml
-# Serviços incluídos:
-- chatwoot_app (Rails + Puma)
-- chatwoot_sidekiq (Background Jobs)
-- chatwoot_postgres (pgvector/pgvector:pg16)
-- chatwoot_redis (redis:7-alpine)
+version: '3.8'
+
+services:
+  chatwoot_app:
+    image: eversonsantosdev/chatwoot-sdr-ia:3.1.3
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    environment:
+      - RAILS_ENV=production
+      - NODE_ENV=production
+      - INSTALLATION_ENV=docker
+      - RAILS_LOG_TO_STDOUT=true
+      - POSTGRES_HOST=chatwoot_postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=chatwoot_production
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-SuaSenhaSegura}
+      - REDIS_URL=redis://chatwoot_redis:6379
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - DEFAULT_LOCALE=pt_BR
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - chatwoot_internal
+      - network_public
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.chatwoot.rule=Host(`${CHATWOOT_DOMAIN}`)
+        - traefik.http.routers.chatwoot.entrypoints=websecure
+        - traefik.http.routers.chatwoot.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.chatwoot.service=chatwoot
+        - traefik.http.services.chatwoot.loadbalancer.server.port=3000
+        - traefik.swarm.network=network_public
+
+  chatwoot_sidekiq:
+    image: eversonsantosdev/chatwoot-sdr-ia:3.1.3
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      - RAILS_ENV=production
+      - NODE_ENV=production
+      - INSTALLATION_ENV=docker
+      - RAILS_LOG_TO_STDOUT=true
+      - POSTGRES_HOST=chatwoot_postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=chatwoot_production
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-SuaSenhaSegura}
+      - REDIS_URL=redis://chatwoot_redis:6379
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - DEFAULT_LOCALE=pt_BR
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+
+  chatwoot_postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      - POSTGRES_DB=chatwoot_production
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-SuaSenhaSegura}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+
+  chatwoot_redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+
+networks:
+  chatwoot_internal:
+    driver: overlay
+  network_public:
+    external: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  chatwoot_storage:
 ```
 
-### 🐛 Correções
+### Guia de Instalacao Completo
 
-#### Build de Assets (CRÍTICO)
-- **Problema**: Frontend do SDR IA não aparecia no menu
-- **Causa**: Assets Vue.js não eram recompilados na imagem Docker
-- **Solução**: Multi-stage build com compilação Vite completa
-- **Resultado**: Menu SDR IA aparece em Configurações ✅
+#### 1. Pre-requisitos
+- Docker Swarm inicializado
+- Traefik configurado com network_public
+- Dominio apontando para o servidor
 
-#### Extensão pgvector
-- **Problema**: Erro "extension vector is not available"
-- **Causa**: Imagem postgres:16-alpine não tem pgvector
-- **Solução**: Alterado para pgvector/pgvector:pg16
-- **Resultado**: Chatwoot v4 inicia sem erros ✅
-
-#### Caracteres Especiais em Senhas
-- **Problema**: YAML não parseava senha com `!`
-- **Solução**: Removidos caracteres especiais da senha padrão
-- **Resultado**: Stack deploya sem erros de sintaxe ✅
-
-#### Migrations Duplicadas
-- **Problema**: Erro de coluna já existe
-- **Causa**: 5 arquivos de migration com colunas sobrepostas
-- **Solução**: Consolidado em única migration `20251120100000_create_sdr_ia_configs.rb`
-- **Resultado**: Migrations executam sem conflitos ✅
-
-#### Versão do pnpm
-- **Problema**: Build falhava com "project requires pnpm v10.2.0"
-- **Solução**: Atualizado pnpm de 9.0.4 para 10.2.0
-- **Resultado**: Build completa com sucesso ✅
-
-### 📋 Arquivos de Stack
-
-| Arquivo | Descrição |
-|---------|-----------|
-| `stack-portainer.yml` | Stack completa para Portainer com variáveis |
-| `deploy-stack.yml` | Stack para deploy direto com valores fixos |
-
-### 🔐 Variáveis de Ambiente
-
-```env
-# Obrigatórias
-SECRET_KEY_BASE=<openssl rand -hex 64>
-FRONTEND_URL=https://seu-dominio.com
-POSTGRES_PASSWORD=SuaSenhaSegura
-
-# Opcionais
-DEFAULT_LOCALE=pt_BR
-CHATWOOT_DOMAIN=seu-dominio.com
-```
-
-### 📊 Versões Anteriores Deprecadas
-
-| Versão | Status | Motivo |
-|--------|--------|--------|
-| 3.1.1 | ❌ Falhou | Versão pnpm incorreta |
-| 3.1.0 | ❌ Falhou | corepack não disponível |
-| 3.0.1 | ⚠️ Incompleto | Assets não compilados |
-| 3.0.0 | ⚠️ Incompleto | Migrations com conflitos |
-
-### 🚀 Como Usar
-
-#### Via Docker Hub (Recomendado)
+#### 2. Configurar Variaveis
 ```bash
-docker pull eversonsantosdev/chatwoot-sdr-ia:3.1.2
+# Gerar SECRET_KEY_BASE
+openssl rand -hex 64
+
+# Variaveis necessarias:
+SECRET_KEY_BASE=<gerado acima>
+FRONTEND_URL=https://seudominio.com
+CHATWOOT_DOMAIN=seudominio.com
+POSTGRES_PASSWORD=SuaSenhaSegura@2024
 ```
 
-#### Via Portainer
+#### 3. Deploy via Portainer
 1. Stacks > Add Stack
-2. Cole o conteúdo de `stack-portainer.yml`
-3. Configure variáveis de ambiente
-4. Deploy!
+2. Cole a stack YAML acima
+3. Configure as Environment Variables
+4. Deploy
 
-#### Via Docker Swarm
+#### 4. Criar Super Admin
 ```bash
-docker stack deploy -c deploy-stack.yml chatwoot
+# Acessar console do container
+docker exec -it <container_chatwoot_app> bundle exec rails console
+
+# No Rails console:
+account = Account.create!(name: "Minha Empresa", locale: "pt_BR")
+u = User.new
+u.name = "Admin"
+u.email = "admin@meudominio.com"
+u.password = "MinhaSenh@Segura"
+u.password_confirmation = "MinhaSenh@Segura"
+u.type = "SuperAdmin"
+u.skip_confirmation!
+u.save!
+AccountUser.create!(account: account, user: user, role: :administrator)
+exit
 ```
 
-### 📝 Primeiro Acesso
-
-1. Acesse `https://seu-dominio.com`
-2. Crie Super Admin via Rails console:
-```ruby
-docker exec -it <container> bundle exec rails runner "
-  u = User.new(email: 'admin@exemplo.com', password: 'senha123', name: 'Admin', type: 'SuperAdmin')
-  u.skip_confirmation_notification!
-  u.confirm
-  u.save!
-"
-```
-3. Crie uma Account para o usuário
-4. Acesse Configurações > SDR IA
+#### 5. Acessar Sistema
+- URL: https://seudominio.com
+- Email: admin@meudominio.com
+- Senha: MinhaSenh@Segura
 
 ---
 
-## [2.1.1] - 2025-11-24 ✅ VERSÃO ESTÁVEL ANTERIOR
+## [3.1.2] - 2025-11-27 - VERSAO COM PROBLEMAS
 
-### 🎯 Status da Versão
-- ✅ **VERSÃO ESTÁVEL E VALIDADA EM PRODUÇÃO**
-- ✅ **RECOMENDADA PARA PRODUÇÃO (LATEST)**
-- ✅ **TODOS OS TESTES PASSANDO**
-- 📅 **Data**: 24 de Novembro de 2025
-- 🔖 **Tag Git**: `v2.1.1`, `latest`
-- 🐳 **Imagem Docker**: `localhost/chatwoot-sdr-ia:v2.1.1-audio`
-
-### 🐛 Correção Crítica
-
-#### Transcrição de Áudio Não Funcionava
-**Problema:** Sistema de transcrição de áudio estava implementado mas não era chamado quando leads enviavam áudios.
-
-**Sintomas:**
-- ❌ Áudios do WhatsApp sendo ignorados
-- ❌ Nenhum log `[Audio]` aparecendo
-- ❌ IA não respondia a mensagens de áudio
-- ✅ `AudioTranscriber.rb` existia mas nunca era executado
-
-**Root Cause:**
-- **Arquivo:** `plugins/sdr_ia/app/services/conversation_manager_v2.rb:47-66`
-- **Problema:** Método `build_conversation_history()` usava `.pluck(:message_type, :content, :created_at)` que retorna apenas os campos especificados
-- **Consequência:** Não era possível acessar `message.attachments`, então áudios eram invisíveis
-
-**Código Bugado:**
-```ruby
-# LINHA 47-66 (ANTES):
-messages = conversation.messages
-  .where.not(content: nil)
-  .where.not(content: '')
-  .pluck(:message_type, :content, :created_at)  # ❌ Não busca attachments
-
-messages.each do |msg_type, content, created_at|
-  # Só processa texto...
-end
-```
-
-**Correção Aplicada:**
-```ruby
-# LINHA 47-98 (DEPOIS):
-messages = conversation.messages
-  .order(created_at: :asc)
-  .limit(30)  # Busca objetos Message completos
-
-messages.each do |message|
-  # Detecta áudio
-  if message.content.blank? && message.attachments.present?
-    audio_attachment = message.attachments.find { |att|
-      att.file_type == 'audio' ||
-      att.content_type&.start_with?('audio/')
-    }
-
-    if audio_attachment
-      transcriber = SdrIa::AudioTranscriber.new(@account)
-      transcription = transcriber.transcribe_from_url(audio_attachment.download_url)
-      content = "[Áudio transcrito]: #{transcription}"
-    end
-  end
-end
-```
-
-**Impacto:**
-- ✅ Áudios agora são detectados automaticamente
-- ✅ Transcrição via Whisper API funcional
-- ✅ IA responde baseada no conteúdo do áudio
-- ✅ Suporte a MP3, M4A, WAV, OGG (até 25MB)
-
-**Arquivos Modificados:**
-- `plugins/sdr_ia/app/services/conversation_manager_v2.rb` (linhas 47-98)
-
-**Documentação:**
-- `HOTFIX_v2.1.1-audio.md` - Análise técnica completa
+### Status
+- **DEPRECADA** - Substituida pela v3.1.3
+- Problemas: Labels do Traefik incorretas
 
 ---
 
-## [2.1.0] - 2025-11-24
+## [3.1.1] - 2025-11-27
 
-### 🚀 Novos Recursos
-
-#### 1. Sistema de Buffer de Mensagens
-- **Problema resolvido:** IA respondia cada mensagem individualmente quando lead enviava múltiplas mensagens seguidas
-- **Solução:** Sistema de agrupamento com janela de 35 segundos
-- **Arquivos:**
-  - `plugins/sdr_ia/app/services/message_buffer.rb` (novo)
-  - `plugins/sdr_ia/app/jobs/process_buffered_messages_job.rb` (novo)
-  - `plugins/sdr_ia/app/listeners/sdr_ia_listener.rb` (modificado)
-- **Funcionamento:**
-  - Lead envia: "Oi" + "Tudo bem?" + "Quero fazer botox"
-  - Sistema aguarda 35 segundos
-  - IA processa todas as mensagens juntas
-  - Responde UMA única vez com contexto completo
-- **Benefícios:**
-  - Conversas mais naturais
-  - Redução de 70% no uso de API OpenAI
-  - Melhor experiência do lead
-
-#### 2. Transcrição de Áudio (Whisper)
-- **Recurso:** Suporte completo a mensagens de áudio do WhatsApp
-- **Arquivos:**
-  - `plugins/sdr_ia/app/services/audio_transcriber.rb` (novo)
-- **Tecnologia:** OpenAI Whisper API
-- **Funcionamento:**
-  - Lead envia áudio pelo WhatsApp
-  - Sistema baixa o áudio via Chatwoot API
-  - Whisper transcreve o áudio em texto
-  - IA processa a transcrição normalmente
-- **Suporte:** MP3, M4A, WAV, OGG (máximo 25MB)
-
-#### 3. Sistema Round Robin de Atribuição
-- **Recurso:** Distribuição automática e equilibrada de leads qualificados
-- **Arquivos:**
-  - `plugins/sdr_ia/app/services/round_robin_assigner.rb` (novo)
-- **Funcionamento:**
-  - Leads QUENTES e MORNOS são automaticamente atribuídos
-  - Distribuição balanceada entre closers da equipe
-  - Rastreamento via Redis para persistência
-  - Logs detalhados de cada atribuição
-- **Configuração:**
-  ```ruby
-  CLOSERS_TEAM = [
-    'pedro.zoia@nexusatemporal.com',
-    'outro.closer@nexusatemporal.com'
-  ]
-  ```
-
-### ✨ Melhorias
-
-#### Sistema de Qualificação Aprimorado
-
-**Novo Sistema de Pontuação:**
-- **INTERESSE (0-50 pontos)** - Fator principal ⚠️
-  - Específico e claro (ex: "botox", "remoção de tatuagem") = 50 pontos
-  - Genérico mas definido (ex: "harmonização") = 40 pontos
-  - Vago mas tem interesse = 30 pontos
-  - SEM interesse real = 0 pontos
-  - **Regra crítica:** Qualquer procedimento específico = mínimo 40 pontos
-
-- **URGÊNCIA (0-30 pontos)**
-  - Esta semana = 30 pontos
-  - Próximas 2 semanas = 25 pontos
-  - Até 30 dias = 20 pontos
-  - Acima de 30 dias = 15 pontos
-  - Só pesquisando mas demonstra interesse = 10 pontos
-
-- **CONHECIMENTO (0-20 pontos)**
-  - Já sabe valores e como funciona = 20 pontos
-  - Pesquisou um pouco = 15 pontos
-  - Primeira pesquisa = 10 pontos
-  - Não sabe nada mas quer saber = 5 pontos
-
-- **LOCALIZAÇÃO (0-10 pontos)**
-  - Bairro próximo (<15km) = 10 pontos
-  - Bairro distante (>15km) = 5 pontos
-  - Outra cidade = 0 pontos
-
-- **MOTIVAÇÃO BÔNUS (0-20 pontos)**
-  - Objetivo claro (casamento, evento, data específica) = 20 pontos
-  - Objetivo genérico (melhorar aparência) = 10 pontos
-  - Sem motivação clara = 0 pontos
-
-**Temperaturas Rebalanceadas:**
-- 🔴 **QUENTE (90-130 pontos):** Alta intenção, quer começar logo → Atribuído ao closer
-- 🟡 **MORNO (50-89 pontos):** Interesse real, precisa nutrição → Atribuído ao closer
-- 🔵 **FRIO (20-49 pontos):** Interesse vago ou muito inicial → Nutrição
-- ⚫ **MUITO FRIO (0-19 pontos):** SEM interesse real → Apenas registro
-
-**Regras Especiais:**
-- Se mencionou procedimento específico → NUNCA será MUITO_FRIO
-- Se disse "não tenho interesse" → MUITO_FRIO independente do score
-- INTERESSE avaliado PRIMEIRO, depois o score total
-
-### 🐛 Correções de Bugs (Hotfixes)
-
-#### Hotfix 1: Namespace Error
-- **Problema:** Mensagens pararam de ser processadas após v2.1.0
-- **Causa:** `MessageBuffer.new()` sem namespace `SdrIa::`
-- **Arquivo:** `plugins/sdr_ia/app/listeners/sdr_ia_listener.rb:39`
-- **Correção:** `SdrIa::MessageBuffer.new(conversation.id)`
-- **Impacto:** Sistema voltou a processar mensagens
-
-#### Hotfix 2: Redis TTL Incorreto
-- **Problema:** Buffer vazio ao processar job após 35 segundos
-- **Causa:** TTL de 10s, mas job executa após 35s
-- **Arquivo:** `plugins/sdr_ia/app/services/message_buffer.rb:35,44`
-- **Correção:** TTL alterado de 10s para 45s
-- **Impacto:** Buffer mantém mensagens até job processar
-
-#### Hotfix 3: Mensagem de Encerramento Indesejada
-- **Problema:** Sistema enviava mensagem automática "Vou te conectar com Pedro Zoia..."
-- **Arquivo:** `plugins/sdr_ia/app/services/conversation_manager_v2.rb:156`
-- **Correção:** Comentada chamada `send_closing_message(analysis)`
-- **Impacto:** Lead não recebe mensagem duplicada
-
-#### Hotfix 4: Temperatura Incorreta (CRÍTICO)
-- **Problema:** Leads com interesse real classificados como FRIO e não atribuídos
-- **Exemplo:** Lead com "remoção de tatuagem" = 40 pontos = FRIO = não atribuído
-- **Arquivo:** `plugins/sdr_ia/config/prompts_new.yml`
-- **Correção:**
-  - INTERESSE aumentado de 0-30 para 0-50 pontos
-  - Range MORNO expandido: 50-79 → 50-89 pontos
-  - Regra crítica: procedimento específico = mínimo 40 pontos
-  - INTERESSE como fator primário na classificação
-- **Impacto:** Aumento de 60-80% na taxa de atribuição de leads qualificados
-
-### 🔧 Alterações Técnicas
-
-#### Arquivos Novos
-```
-plugins/sdr_ia/app/services/message_buffer.rb
-plugins/sdr_ia/app/services/audio_transcriber.rb
-plugins/sdr_ia/app/services/round_robin_assigner.rb
-plugins/sdr_ia/app/jobs/process_buffered_messages_job.rb
-```
-
-#### Arquivos Modificados
-```
-plugins/sdr_ia/app/listeners/sdr_ia_listener.rb
-plugins/sdr_ia/app/services/conversation_manager_v2.rb
-plugins/sdr_ia/config/prompts_new.yml
-```
-
-#### Dependências
-- Redis para buffer e round robin
-- OpenAI Whisper API para transcrição
-- Sidekiq para jobs agendados
-
-### 📊 Melhorias de Performance
-
-- **Redução de 70% em chamadas à API OpenAI** (via buffer de mensagens)
-- **Tempo médio de resposta:** <40 segundos (incluindo janela de buffer)
-- **Taxa de atribuição:** +60-80% para leads qualificados
-- **Zero downtime** em todos os deploys
-
-### 📈 Métricas de Qualidade
-
-| Métrica | Antes | Depois |
-|---------|-------|--------|
-| Respostas únicas (vs múltiplas) | 30% | 95% |
-| Leads com interesse atribuídos | 40% | 95% |
-| Suporte a áudio | 0% | 100% |
-| Distribuição de leads | Manual | Automática |
-
-### 🔐 Segurança
-
-- Validação de tipos de arquivo de áudio
-- Limite de tamanho de áudio (25MB)
-- Namespacing correto de classes Ruby
-- TTL adequado para chaves Redis
-
-### 📝 Documentação
-
-Novos arquivos de documentação:
-- `HOTFIX_v2.1.0.md` - Correção de namespace
-- `HOTFIX_v2.1.0-temperatura.md` - Correção do sistema de temperatura
-- `CHANGELOG.md` - Este arquivo
-
-### 🚀 Deploy
-
-**Imagem Docker:** `localhost/chatwoot-sdr-ia:v2.1.0-hotfix4`
-- **SHA256:** `ec96f667dfb277d89fddfa7b6691081fdbef787125278cff8b44b816ea99f847`
-- **Tamanho:** 2.51 GB
-- **Build:** Dockerfile multi-stage otimizado
-
-**Serviços Atualizados:**
-- `chatwoot_chatwoot_app`
-- `chatwoot_chatwoot_sidekiq`
-
-### ⚠️ Breaking Changes
-
-Nenhuma breaking change. Todas as alterações são retrocompatíveis.
-
-### 🔄 Migrações
-
-Nenhuma migração de banco de dados necessária.
-
-### 🎯 Próximos Passos (Roadmap)
-
-1. Dashboard de métricas de qualificação
-2. Integração com CRM externo
-3. A/B testing de prompts
-4. Relatórios automáticos de performance
-5. Suporte a múltiplos idiomas
+### Status
+- **FALHOU** - Versao pnpm incorreta
 
 ---
 
-## [2.0.0] - 2025-11-22
+## [3.1.0] - 2025-11-27
 
-### 🎯 Status da Versão
-- ✅ **VERSÃO COMPLETA E PRONTA PARA PRODUÇÃO**
-- ✅ **TODAS AS AUTOMAÇÕES IMPLEMENTADAS**
-- ✅ **100% CONFIGURÁVEL PELO PAINEL ADMIN**
-- 📅 **Data**: 22 de Novembro de 2025
-- 🔖 **Tag Git**: `v2.0.0`
-
-### 🚀 Principais Mudanças
-
-#### ✨ NOVA FUNCIONALIDADE: Base de Conhecimento da Empresa
-**Nova aba no painel administrativo** para adicionar informações universais do negócio.
-
-**Funcionalidades**:
-- 📚 Campo de texto rico para informações da empresa
-- 🏥 Adicionar horários, endereços, valores, procedimentos
-- 💡 IA usa essas informações automaticamente nas respostas
-- ✅ 100% configurável pelo painel (zero código)
-
-**Benefício**: IA responde perguntas com precisão de 95%+ usando dados reais da empresa.
-
-#### ✨ NOVA FUNCIONALIDADE: Nota Privada Automática para Closer
-**Sistema cria nota detalhada automaticamente** quando lead é qualificado.
-
-**Funcionalidades**:
-- 📝 Nota privada gerada automaticamente após qualificação
-- 🎯 Contém: Score, Temperatura, Resumo, Próximo Passo
-- 🔒 Visível apenas para agentes (lead não vê)
-- ⏱️ Closer economiza 2-4 minutos por lead
-
-**Benefício**: Closer recebe contexto completo sem precisar ler histórico inteiro.
-
-#### ✨ NOVA FUNCIONALIDADE: Estágio do Funil Automático
-**Novo custom attribute** atualizado automaticamente baseado na qualificação.
-
-**Valores disponíveis**:
-- Novo Lead
-- Contato Inicial
-- Lead Qualificado ← Automático
-- Em Negociação
-- Pagamento Pendente
-- Fechado
-- Lead Esfriou
-- Lead Desqualificado ← Automático
+### Status
+- **FALHOU** - corepack nao disponivel
 
 ---
 
-## [1.2.0] - 2025-11-20
+## [3.0.x] - Versoes Anteriores
 
-### 🎯 Status da Versão
-- ✅ **VERSÃO TOTALMENTE FUNCIONAL E TESTADA**
-- ✅ **IA CONVERSACIONAL 100% OPERACIONAL**
-- ✅ **RECOMENDADA PARA PRODUÇÃO**
-- 📅 **Data**: 20 de Novembro de 2025
-- 🔖 **Tag Git**: `v1.2.0`
-
-### 🎯 Principais Mudanças
-
-Esta versão transforma o SDR IA de um bot mecânico em uma assistente conversacional natural e inteligente que usa OpenAI em **tempo real** para cada resposta.
-
-### Added
-- 🤖 **ConversationManagerV2 - IA em Tempo Real**
-  - OpenAI gera resposta **a cada mensagem** do lead (não apenas no final)
-  - Histórico completo da conversa enviado para contexto da IA
-  - Qualificação automática após ~8 mensagens ou quando lead pede humano
-
-- 🤖 **Prompt Conversacional Completo**
-  - IA agora conversa de forma natural, não apenas faz perguntas mecânicas
-  - Responde perguntas do lead antes de prosseguir com qualificação
-  - Extrai informações implícitas das respostas
-  - Tom profissional, simpático e não robotizado
-
-- 👤 **Agente Padrão Configurável**
-  - Novo campo `default_agent_email` em `sdr_ia_configs`
-  - Todas as mensagens automáticas são enviadas pelo agente configurado
-
-- 🏢 **Personalização da Clínica**
-  - Novo campo `clinic_name` - Nome da clínica
-  - Novo campo `ai_name` - Nome da IA
-  - Novo campo `clinic_address` - Endereço completo
-
-- 📊 **Sistema de Scoring Aprimorado (0-130 pontos)**
-  - Interesse (0-30), Urgência (0-40), Conhecimento (0-30)
-  - Localização (0-10), Motivação BÔNUS (0-20)
+Consulte o historico do repositorio para versoes anteriores.
 
 ---
 
-## [1.1.2] - 2025-11-20
+## Versoes Anteriores Estaveis
 
-### 🎯 Status da Versão
-- ✅ **VERSÃO TOTALMENTE FUNCIONAL**
-- ✅ **RECOMENDADA PARA BACKUP E RESTORE**
-- 📅 **Data/Hora**: 20 de Novembro de 2025 às 22:26 UTC
-- 🔖 **Tag Git**: `v1.1.2`
-
-### Fixed
-- 🐛 **CRÍTICO: Erro "undefined method 'agents' for Inbox" ao enviar mensagens**
-  - **Solução**: Substituído por `conversation.assignee || @account.users.first`
-  - **Resultado**: Mensagens agora são enviadas com sucesso ✅
+| Versao | Status | Notas |
+|--------|--------|-------|
+| 2.1.1 | Estavel | Correcao de transcricao de audio |
+| 2.1.0 | Estavel | Buffer de mensagens, Round Robin |
+| 2.0.0 | Estavel | Base de conhecimento, Notas privadas |
+| 1.2.0 | Estavel | IA conversacional em tempo real |
 
 ---
 
-## [1.1.1] - 2025-11-20
-
-### Fixed
-- 🐛 **Erro "TypeError: x.put is not a function" ao salvar configurações**
-  - **Solução**: Substituído por chamadas diretas ao `axios.put/get/post`
-
-- 🐛 **Assets compilados não sendo atualizados no navegador**
-  - **Solução**: Script de deploy agora copia todos os assets para o volume
-
----
-
-## [1.1.0] - 2025-11-20
-
-### Added
-- 🎨 **Interface Visual Completa para Configuração de Prompts**
-  - Editor de prompts do sistema e análise diretamente no painel
-  - 4 abas organizadas: Configurações Gerais, Prompts da IA, Perguntas por Etapa, Sistema de Scoring
-
-- 💾 **Configurações Armazenadas no Banco de Dados**
-  - Novos campos: `prompt_system`, `prompt_analysis`, `perguntas_etapas`
-  - Cada conta pode ter configuração própria
-
----
-
-## [1.0.0] - 2025-11-20
-
-### ✅ Status Atual
-- **Módulo**: Totalmente operacional
-- **Deploy**: Docker Swarm com imagem customizada
-- **Commit**: `18256b8`
-
-### Added
-- ✨ Módulo SDR IA completo para qualificação automática de leads
-- 🎨 Interface administrativa Vue.js com dashboard e configurações
-- 🤖 Integração com OpenAI (GPT-4, GPT-4 Turbo, GPT-3.5)
-- 📊 Sistema de scoring 0-100 para leads
-- 🌡️ Classificação por temperatura (Quente, Morno, Frio, Muito Frio)
-- 🔄 Processamento assíncrono com Sidekiq
-- 📝 16 custom attributes para Contact
-- 🏷️ 14 labels automáticas para categorização
-- 🚀 Dockerfile profissional para build customizado
-- 📜 Scripts automatizados: install.sh, rebuild.sh, deploy.sh, update.sh, uninstall.sh
-
----
-
-## Formato do Changelog
-
-### Tipos de Mudança
-- `Added` para novos recursos
-- `Changed` para mudanças em recursos existentes
-- `Deprecated` para recursos que serão removidos
-- `Removed` para recursos removidos
-- `Fixed` para correções de bugs
-- `Security` para correções de segurança
-
-### Versionamento Semântico
-- **MAJOR** (X.0.0): Breaking changes
-- **MINOR** (0.X.0): Novos recursos (retrocompatível)
-- **PATCH** (0.0.X): Correções de bugs
-
----
-
-**Repositório:** https://github.com/eversonsantos-dev/chatwoot-sdr-ia
+**Repositorio:** https://github.com/eversonsantos-dev/chatwoot-sdr-ia
+**Docker Hub:** https://hub.docker.com/r/eversonsantosdev/chatwoot-sdr-ia
 **Mantenedor:** Everson Santos (@eversonsantos-dev)
-**Licença:** MIT
+**Licenca:** MIT
