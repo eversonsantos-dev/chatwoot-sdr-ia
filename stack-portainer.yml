@@ -1,0 +1,167 @@
+# ============================================================
+# CHATWOOT SDR IA - Stack Completa v3.0
+# ============================================================
+# Deploy via Portainer: Stacks > Add Stack > Paste
+#
+# VARIÁVEIS OBRIGATÓRIAS (configure no Portainer):
+# - SECRET_KEY_BASE: Gere com: openssl rand -hex 64
+# - FRONTEND_URL: https://seu-dominio.com
+# - CHATWOOT_DOMAIN: seu-dominio.com (sem https://)
+# ============================================================
+
+version: '3.8'
+
+services:
+  # ========================================
+  # CHATWOOT APP (Rails Server)
+  # ========================================
+  chatwoot_app:
+    image: eversonsantosdev/chatwoot-sdr-ia:latest
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    environment:
+      # === Rails ===
+      - RAILS_ENV=production
+      - NODE_ENV=production
+      - INSTALLATION_ENV=docker
+      - RAILS_LOG_TO_STDOUT=true
+
+      # === Banco de Dados ===
+      - POSTGRES_HOST=chatwoot_postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=chatwoot_production
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ChatwootDB2024!}
+
+      # === Redis ===
+      - REDIS_URL=redis://chatwoot_redis:6379
+
+      # === Aplicação (OBRIGATÓRIO) ===
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - FRONTEND_URL=${FRONTEND_URL}
+
+      # === Locale ===
+      - DEFAULT_LOCALE=pt_BR
+
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - chatwoot_internal
+      - network_public
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.chatwoot.rule=Host(`${CHATWOOT_DOMAIN}`)
+        - traefik.http.routers.chatwoot.entrypoints=websecure
+        - traefik.http.routers.chatwoot.tls.certresolver=letsencryptresolver
+        - traefik.http.services.chatwoot.loadbalancer.server.port=3000
+    depends_on:
+      - chatwoot_postgres
+      - chatwoot_redis
+
+  # ========================================
+  # CHATWOOT SIDEKIQ (Background Jobs)
+  # ========================================
+  chatwoot_sidekiq:
+    image: eversonsantosdev/chatwoot-sdr-ia:latest
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      - RAILS_ENV=production
+      - NODE_ENV=production
+      - INSTALLATION_ENV=docker
+      - RAILS_LOG_TO_STDOUT=true
+      - POSTGRES_HOST=chatwoot_postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=chatwoot_production
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ChatwootDB2024!}
+      - REDIS_URL=redis://chatwoot_redis:6379
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - DEFAULT_LOCALE=pt_BR
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+    depends_on:
+      - chatwoot_postgres
+      - chatwoot_redis
+
+  # ========================================
+  # POSTGRESQL
+  # ========================================
+  chatwoot_postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=chatwoot_production
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ChatwootDB2024!}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ========================================
+  # REDIS
+  # ========================================
+  chatwoot_redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ========================================
+# NETWORKS
+# ========================================
+networks:
+  chatwoot_internal:
+    driver: overlay
+    attachable: true
+  network_public:
+    external: true
+
+# ========================================
+# VOLUMES
+# ========================================
+volumes:
+  postgres_data:
+  redis_data:
+  chatwoot_storage:
