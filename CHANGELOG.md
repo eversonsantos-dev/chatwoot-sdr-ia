@@ -7,7 +7,154 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-## [2.1.1] - 2025-11-24 ✅ VERSÃO ESTÁVEL - LATEST
+## [3.1.2] - 2025-11-27 ✅ VERSÃO ESTÁVEL - LATEST
+
+### 🎯 Status da Versão
+- ✅ **VERSÃO ESTÁVEL E PUBLICADA NO DOCKER HUB**
+- ✅ **RECOMENDADA PARA PRODUÇÃO**
+- ✅ **DEPLOY AUTOMÁTICO VIA PORTAINER**
+- 📅 **Data**: 27 de Novembro de 2025
+- 🔖 **Tag Git**: `v3.1.2`
+- 🐳 **Docker Hub**: `eversonsantosdev/chatwoot-sdr-ia:3.1.2`
+
+### 🚀 Novidades Principais
+
+#### Imagem Docker Pública no Docker Hub
+- **Primeira versão publicada oficialmente no Docker Hub**
+- Imagem pronta para deploy em qualquer servidor
+- CI/CD automatizado via GitHub Actions
+- Multi-architecture support (amd64)
+
+#### Deploy Simplificado via Portainer
+- Stack YAML pronta para colar no Portainer
+- Configuração via variáveis de ambiente
+- Zero necessidade de build local
+- Migrations automáticas na primeira execução
+
+### 🔧 Melhorias Técnicas
+
+#### Dockerfile Multi-Stage Build
+- **Stage 1 (Builder)**: Compila assets Vue.js com Node.js e pnpm
+- **Stage 2 (Production)**: Imagem final otimizada sem ferramentas de build
+- Assets do SDR IA incluídos na compilação Vite
+- Redução significativa do tamanho final da imagem
+
+#### Entrypoint Inteligente
+- Detecção automática de banco vazio vs existente
+- Executa `db:chatwoot_prepare` em instalação limpa
+- Executa `db:migrate` em atualizações
+- Aguarda PostgreSQL estar disponível antes de iniciar
+
+#### PostgreSQL com pgvector
+- Suporte a extensão vector (obrigatória no Chatwoot v4)
+- Imagem `pgvector/pgvector:pg16` configurada por padrão
+- Compatível com funcionalidades de AI/embeddings do Chatwoot
+
+### 📦 Stack de Deploy
+
+```yaml
+# Serviços incluídos:
+- chatwoot_app (Rails + Puma)
+- chatwoot_sidekiq (Background Jobs)
+- chatwoot_postgres (pgvector/pgvector:pg16)
+- chatwoot_redis (redis:7-alpine)
+```
+
+### 🐛 Correções
+
+#### Build de Assets (CRÍTICO)
+- **Problema**: Frontend do SDR IA não aparecia no menu
+- **Causa**: Assets Vue.js não eram recompilados na imagem Docker
+- **Solução**: Multi-stage build com compilação Vite completa
+- **Resultado**: Menu SDR IA aparece em Configurações ✅
+
+#### Extensão pgvector
+- **Problema**: Erro "extension vector is not available"
+- **Causa**: Imagem postgres:16-alpine não tem pgvector
+- **Solução**: Alterado para pgvector/pgvector:pg16
+- **Resultado**: Chatwoot v4 inicia sem erros ✅
+
+#### Caracteres Especiais em Senhas
+- **Problema**: YAML não parseava senha com `!`
+- **Solução**: Removidos caracteres especiais da senha padrão
+- **Resultado**: Stack deploya sem erros de sintaxe ✅
+
+#### Migrations Duplicadas
+- **Problema**: Erro de coluna já existe
+- **Causa**: 5 arquivos de migration com colunas sobrepostas
+- **Solução**: Consolidado em única migration `20251120100000_create_sdr_ia_configs.rb`
+- **Resultado**: Migrations executam sem conflitos ✅
+
+#### Versão do pnpm
+- **Problema**: Build falhava com "project requires pnpm v10.2.0"
+- **Solução**: Atualizado pnpm de 9.0.4 para 10.2.0
+- **Resultado**: Build completa com sucesso ✅
+
+### 📋 Arquivos de Stack
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `stack-portainer.yml` | Stack completa para Portainer com variáveis |
+| `deploy-stack.yml` | Stack para deploy direto com valores fixos |
+
+### 🔐 Variáveis de Ambiente
+
+```env
+# Obrigatórias
+SECRET_KEY_BASE=<openssl rand -hex 64>
+FRONTEND_URL=https://seu-dominio.com
+POSTGRES_PASSWORD=SuaSenhaSegura
+
+# Opcionais
+DEFAULT_LOCALE=pt_BR
+CHATWOOT_DOMAIN=seu-dominio.com
+```
+
+### 📊 Versões Anteriores Deprecadas
+
+| Versão | Status | Motivo |
+|--------|--------|--------|
+| 3.1.1 | ❌ Falhou | Versão pnpm incorreta |
+| 3.1.0 | ❌ Falhou | corepack não disponível |
+| 3.0.1 | ⚠️ Incompleto | Assets não compilados |
+| 3.0.0 | ⚠️ Incompleto | Migrations com conflitos |
+
+### 🚀 Como Usar
+
+#### Via Docker Hub (Recomendado)
+```bash
+docker pull eversonsantosdev/chatwoot-sdr-ia:3.1.2
+```
+
+#### Via Portainer
+1. Stacks > Add Stack
+2. Cole o conteúdo de `stack-portainer.yml`
+3. Configure variáveis de ambiente
+4. Deploy!
+
+#### Via Docker Swarm
+```bash
+docker stack deploy -c deploy-stack.yml chatwoot
+```
+
+### 📝 Primeiro Acesso
+
+1. Acesse `https://seu-dominio.com`
+2. Crie Super Admin via Rails console:
+```ruby
+docker exec -it <container> bundle exec rails runner "
+  u = User.new(email: 'admin@exemplo.com', password: 'senha123', name: 'Admin', type: 'SuperAdmin')
+  u.skip_confirmation_notification!
+  u.confirm
+  u.save!
+"
+```
+3. Crie uma Account para o usuário
+4. Acesse Configurações > SDR IA
+
+---
+
+## [2.1.1] - 2025-11-24 ✅ VERSÃO ESTÁVEL ANTERIOR
 
 ### 🎯 Status da Versão
 - ✅ **VERSÃO ESTÁVEL E VALIDADA EM PRODUÇÃO**
