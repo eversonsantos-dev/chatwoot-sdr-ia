@@ -1,0 +1,264 @@
+# ============================================================
+# CHATWOOT SDR IA - Stack para Portainer
+# ============================================================
+#
+# INSTALAÇÃO VIA PORTAINER:
+# 1. Acesse seu Portainer
+# 2. Vá em Stacks > Add Stack
+# 3. Cole este conteúdo
+# 4. Configure as variáveis de ambiente abaixo
+# 5. Clique em "Deploy the stack"
+#
+# IMPORTANTE: Configure as variáveis na seção "Environment variables"
+# do Portainer antes de fazer deploy!
+#
+# Imagem: eversonsantosdev/chatwoot-sdr-ia
+# Versão: 2.1.3
+# ============================================================
+
+version: '3.8'
+
+services:
+  # ========================================
+  # CHATWOOT APP (Rails Server)
+  # ========================================
+  chatwoot_app:
+    image: eversonsantosdev/chatwoot-sdr-ia:${IMAGE_TAG:-latest}
+
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    entrypoint: docker/entrypoints/rails.sh
+
+    environment:
+      # === CONFIGURAÇÕES DO RAILS ===
+      - RAILS_ENV=production
+      - NODE_ENV=production
+      - INSTALLATION_ENV=docker
+      - RAILS_LOG_TO_STDOUT=true
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+      # === BANCO DE DADOS ===
+      - POSTGRES_HOST=chatwoot_postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-chatwoot_production}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
+
+      # === REDIS ===
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@chatwoot_redis:6379
+
+      # === APLICAÇÃO (OBRIGATÓRIO) ===
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:?Defina SECRET_KEY_BASE}
+      - FRONTEND_URL=${FRONTEND_URL:?Defina FRONTEND_URL}
+      - DEFAULT_LOCALE=${DEFAULT_LOCALE:-pt_BR}
+
+      # === EMAIL (SMTP) ===
+      - MAILER_SENDER_EMAIL=${MAILER_SENDER_EMAIL:-}
+      - SMTP_ADDRESS=${SMTP_ADDRESS:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_AUTHENTICATION=${SMTP_AUTHENTICATION:-plain}
+      - SMTP_DOMAIN=${SMTP_DOMAIN:-}
+      - SMTP_ENABLE_STARTTLS_AUTO=${SMTP_ENABLE_STARTTLS_AUTO:-true}
+
+      # === STORAGE ===
+      - ACTIVE_STORAGE_SERVICE=${ACTIVE_STORAGE_SERVICE:-local}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-}
+
+      # === INTEGRAÇÕES (OPCIONAL) ===
+      - FB_VERIFY_TOKEN=${FB_VERIFY_TOKEN:-}
+      - FB_APP_SECRET=${FB_APP_SECRET:-}
+      - FB_APP_ID=${FB_APP_ID:-}
+      - IG_VERIFY_TOKEN=${IG_VERIFY_TOKEN:-}
+
+    volumes:
+      - chatwoot_storage:/app/storage
+
+    networks:
+      - chatwoot_network
+
+    ports:
+      - "${CHATWOOT_PORT:-3000}:3000"
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+    depends_on:
+      - chatwoot_postgres
+      - chatwoot_redis
+
+  # ========================================
+  # CHATWOOT SIDEKIQ (Background Jobs)
+  # ========================================
+  chatwoot_sidekiq:
+    image: eversonsantosdev/chatwoot-sdr-ia:${IMAGE_TAG:-latest}
+
+    command: bundle exec sidekiq -C config/sidekiq.yml
+
+    environment:
+      # Mesmas variáveis do app
+      - RAILS_ENV=production
+      - NODE_ENV=production
+      - INSTALLATION_ENV=docker
+      - RAILS_LOG_TO_STDOUT=true
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+      - POSTGRES_HOST=chatwoot_postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-chatwoot_production}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@chatwoot_redis:6379
+
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - DEFAULT_LOCALE=${DEFAULT_LOCALE:-pt_BR}
+
+      - MAILER_SENDER_EMAIL=${MAILER_SENDER_EMAIL:-}
+      - SMTP_ADDRESS=${SMTP_ADDRESS:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_AUTHENTICATION=${SMTP_AUTHENTICATION:-plain}
+      - SMTP_DOMAIN=${SMTP_DOMAIN:-}
+      - SMTP_ENABLE_STARTTLS_AUTO=${SMTP_ENABLE_STARTTLS_AUTO:-true}
+
+      - ACTIVE_STORAGE_SERVICE=${ACTIVE_STORAGE_SERVICE:-local}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-}
+
+    volumes:
+      - chatwoot_storage:/app/storage
+
+    networks:
+      - chatwoot_network
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 256M
+
+    depends_on:
+      - chatwoot_postgres
+      - chatwoot_redis
+
+  # ========================================
+  # POSTGRESQL (Database)
+  # ========================================
+  chatwoot_postgres:
+    image: pgvector/pgvector:pg16
+
+    environment:
+      - POSTGRES_DB=${POSTGRES_DATABASE:-chatwoot_production}
+      - POSTGRES_USER=${POSTGRES_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - chatwoot_network
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ========================================
+  # REDIS (Cache & Queue)
+  # ========================================
+  chatwoot_redis:
+    image: redis:7-alpine
+
+    command: >
+      sh -c "redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}"
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - chatwoot_network
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 64M
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ========================================
+# NETWORKS
+# ========================================
+networks:
+  chatwoot_network:
+    driver: overlay
+    attachable: true
+
+# ========================================
+# VOLUMES
+# ========================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  chatwoot_storage:
+    driver: local
