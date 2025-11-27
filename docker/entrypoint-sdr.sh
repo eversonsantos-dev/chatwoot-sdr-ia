@@ -5,27 +5,26 @@ echo "=========================================="
 echo " Chatwoot SDR IA - Iniciando..."
 echo "=========================================="
 
-# Aguardar banco de dados
+# Aguardar PostgreSQL estar disponível
 echo "[INFO] Aguardando PostgreSQL..."
-until bundle exec rails db:version 2>/dev/null; do
-  echo "[INFO] PostgreSQL não disponível, aguardando 5s..."
-  sleep 5
+until pg_isready -h ${POSTGRES_HOST:-chatwoot_postgres} -p ${POSTGRES_PORT:-5432} -U ${POSTGRES_USERNAME:-postgres} 2>/dev/null; do
+  echo "[INFO] PostgreSQL não disponível, aguardando 3s..."
+  sleep 3
 done
 echo "[OK] PostgreSQL conectado!"
 
-# Executar migrations automaticamente
-echo "[INFO] Verificando migrations..."
-if bundle exec rails db:migrate:status 2>/dev/null | grep -q "down"; then
-  echo "[INFO] Executando migrations pendentes..."
-  bundle exec rails db:migrate
-  echo "[OK] Migrations executadas!"
+# Verificar se o banco de dados existe e tem tabelas
+echo "[INFO] Verificando banco de dados..."
+if ! bundle exec rails db:version 2>/dev/null | grep -q "Current version"; then
+  echo "[INFO] Banco de dados não existe ou está vazio. Criando..."
+  bundle exec rails db:chatwoot_prepare
+  echo "[OK] Banco de dados criado e configurado!"
 else
-  echo "[OK] Banco de dados atualizado!"
+  # Banco existe, verificar migrations pendentes
+  echo "[INFO] Banco existe. Verificando migrations..."
+  bundle exec rails db:migrate
+  echo "[OK] Migrations atualizadas!"
 fi
-
-# Preparar banco (seeds, configs, etc)
-echo "[INFO] Preparando Chatwoot..."
-bundle exec rails db:chatwoot_prepare 2>/dev/null || true
 
 echo "=========================================="
 echo " Chatwoot SDR IA - Pronto!"
