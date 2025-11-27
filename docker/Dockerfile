@@ -1,11 +1,38 @@
 # ============================================================
-# Chatwoot SDR IA - Docker Image
+# Chatwoot SDR IA - Docker Image (Multi-Stage Build)
 # ============================================================
 # Imagem: Chatwoot original + Módulo SDR IA
 # Versão: 3.1.0
 # ============================================================
 
 ARG CHATWOOT_VERSION=v4.1.0
+
+# ============================================================
+# STAGE 1: Builder - Compilar assets com Node.js
+# ============================================================
+FROM chatwoot/chatwoot:${CHATWOOT_VERSION} AS builder
+
+USER root
+
+# Instalar Node.js e pnpm
+RUN apk add --no-cache nodejs npm && \
+    npm install -g pnpm@9.0.4
+
+WORKDIR /app
+
+# Copiar arquivos do frontend SDR IA
+COPY frontend/routes/dashboard/settings/sdr-ia /app/app/javascript/dashboard/routes/dashboard/settings/sdr-ia
+COPY frontend/settings.routes.js /app/app/javascript/dashboard/routes/dashboard/settings/settings.routes.js
+COPY frontend/sidebar-settings.js /app/app/javascript/dashboard/components/layout/config/sidebarItems/settings.js
+
+# Instalar dependências e compilar assets
+RUN pnpm install --frozen-lockfile && \
+    SECRET_KEY_BASE=precompile_placeholder RAILS_ENV=production \
+    bundle exec rake assets:precompile
+
+# ============================================================
+# STAGE 2: Final - Imagem de produção
+# ============================================================
 FROM chatwoot/chatwoot:${CHATWOOT_VERSION}
 
 LABEL maintainer="eversonsantos-dev"
@@ -46,31 +73,17 @@ COPY config/routes.rb /app/config/routes.rb
 COPY patches/async_dispatcher.rb /app/app/dispatchers/async_dispatcher.rb
 
 # ============================================================
-# FRONTEND - Arquivos Vue.js do SDR IA
+# FRONTEND - Copiar assets compilados do builder
 # ============================================================
 
-# Componentes SDR IA
+# Copiar arquivos fonte do frontend
 COPY frontend/routes/dashboard/settings/sdr-ia /app/app/javascript/dashboard/routes/dashboard/settings/sdr-ia
-
-# Routes do frontend
 COPY frontend/settings.routes.js /app/app/javascript/dashboard/routes/dashboard/settings/settings.routes.js
-
-# Sidebar com SDR IA
 COPY frontend/sidebar-settings.js /app/app/javascript/dashboard/components/layout/config/sidebarItems/settings.js
 
-# ============================================================
-# RECOMPILAR ASSETS COM SDR IA
-# ============================================================
-
-# Instalar dependências Node e recompilar assets
-WORKDIR /app
-
-# Reinstalar dependências e compilar
-RUN corepack enable && corepack prepare pnpm@9.0.4 --activate && \
-    pnpm install --frozen-lockfile && \
-    SECRET_KEY_BASE=precompile_placeholder RAILS_ENV=production \
-    bundle exec rake assets:precompile && \
-    rm -rf node_modules tmp/cache
+# Copiar assets compilados do stage builder
+COPY --from=builder /app/public/vite /app/public/vite
+COPY --from=builder /app/public/assets /app/public/assets
 
 # ============================================================
 # ENTRYPOINT PERSONALIZADO
