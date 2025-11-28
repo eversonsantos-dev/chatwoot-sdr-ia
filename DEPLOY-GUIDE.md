@@ -453,5 +453,168 @@ gunzip -c chatwoot-sdr-ia-v3.1.4.tar.gz | docker load
 
 ---
 
+## Gerenciamento de Usuarios
+
+### Acessar Rails Console
+
+```bash
+# Entrar no container
+docker exec -it $(docker ps -q -f name=chatwoot_app | head -1) /bin/sh
+
+# Abrir Rails Console
+bundle exec rails console
+```
+
+### Criar Usuario SuperAdmin (Passo a Passo)
+
+Execute linha por linha no Rails Console:
+
+```ruby
+u = User.new
+```
+
+```ruby
+u.name = "Nome do Admin"
+```
+
+```ruby
+u.email = "admin@empresa.com"
+```
+
+```ruby
+u.password = "Senh@Segura2024"
+```
+
+```ruby
+u.password_confirmation = "Senh@Segura2024"
+```
+
+```ruby
+u.type = "SuperAdmin"
+```
+
+```ruby
+u.skip_confirmation!
+```
+
+```ruby
+u.save!
+```
+
+### Associar Usuario a Account Existente
+
+```ruby
+account = Account.first
+```
+
+```ruby
+AccountUser.create!(account: account, user: u, role: :administrator)
+```
+
+### Verificar Usuario Criado
+
+```ruby
+puts "Usuario: #{u.email}"
+puts "Account: #{account.name}"
+puts "Associado: #{u.account_users.count > 0}"
+```
+
+### Sair do Console
+
+```ruby
+exit
+```
+
+---
+
+### Versao Rapida (Copiar Tudo)
+
+```ruby
+# Criar usuario SuperAdmin
+u = User.new
+u.name = "Admin"
+u.email = "admin@empresa.com"
+u.password = "Senh@2024"
+u.password_confirmation = "Senh@2024"
+u.type = "SuperAdmin"
+u.skip_confirmation!
+u.save!
+
+# Associar a conta existente
+account = Account.first
+AccountUser.create!(account: account, user: u, role: :administrator)
+
+exit
+```
+
+---
+
+### Criar Account + Usuario (Instalacao Nova)
+
+```ruby
+# Criar Account
+account = Account.create!(name: "Nome da Empresa", locale: "pt_BR")
+
+# Criar SuperAdmin
+u = User.new
+u.name = "Admin"
+u.email = "admin@empresa.com"
+u.password = "Senh@2024"
+u.password_confirmation = "Senh@2024"
+u.type = "SuperAdmin"
+u.skip_confirmation!
+u.save!
+
+# Associar
+AccountUser.create!(account: account, user: u, role: :administrator)
+
+exit
+```
+
+---
+
+### Redefinir Senha de Usuario
+
+```ruby
+u = User.find_by(email: "admin@empresa.com")
+u.password = "NovaSenha@2024"
+u.password_confirmation = "NovaSenha@2024"
+u.save!
+exit
+```
+
+---
+
+### Listar Todos os Usuarios
+
+```ruby
+User.all.each { |u| puts "#{u.email} - #{u.type}" }
+```
+
+### Listar Todas as Accounts
+
+```ruby
+Account.all.each { |a| puts "#{a.id} - #{a.name}" }
+```
+
+### Verificar Associacoes de Usuario
+
+```ruby
+u = User.find_by(email: "admin@empresa.com")
+puts "Accounts: #{u.account_users.count}"
+u.accounts.each { |a| puts "  - #{a.name}" }
+```
+
+---
+
+### Regras de Senha
+
+- Minimo 6 caracteres
+- **OBRIGATORIO:** Pelo menos 1 caractere especial (@, #, $, %, &, !)
+- Exemplos validos: `Admin@2024`, `Senh#Forte123`, `MinhaSenha$2024`
+- Exemplos invalidos: `admin2024`, `senhafraca`
+
+---
+
 **Documento atualizado em:** 28 de Novembro de 2025
-**Versao do documento:** 1.0
+**Versao do documento:** 1.1
