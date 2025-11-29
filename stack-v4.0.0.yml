@@ -8,7 +8,7 @@ version: "3.8"
 
 services:
   chatwoot_app:
-    image: eversonsantosdev/chatwoot-sdr-ia-latest:4.0.0
+    image: eversonsantosdev/chatwoot-sdr-ia:4.0.0
     command: bundle exec rails s -p 3000 -b 0.0.0.0
     environment:
       # Rails
@@ -57,7 +57,7 @@ services:
         - traefik.swarm.network=network_public
 
   chatwoot_sidekiq:
-    image: eversonsantosdev/chatwoot-sdr-ia-latest:4.0.0
+    image: eversonsantosdev/chatwoot-sdr-ia:4.0.0
     command: bundle exec sidekiq -C config/sidekiq.yml
     environment:
       RAILS_ENV: production
