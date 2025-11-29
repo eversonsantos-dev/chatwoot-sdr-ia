@@ -22,6 +22,17 @@ const stats = ref(null);
 const teams = ref([]);
 const activeTab = ref('general'); // general, prompts, questions, scoring
 
+// License info
+const licenseInfo = ref(null);
+const hasValidLicense = computed(() => {
+  if (!licenseInfo.value) return false;
+  // has_license é retornado pelo backend
+  if (licenseInfo.value.has_license === false) return false;
+  // Verificar se pode processar (status ativo, não expirado)
+  if (licenseInfo.value.can_process === false) return false;
+  return true;
+});
+
 // Settings form
 const settings = ref({
   sdr_ia: {
@@ -117,11 +128,26 @@ const loadSettings = async () => {
     if (response.data.settings) {
       settings.value = response.data.settings;
     }
+    // Capturar informações de licença
+    if (response.data.license) {
+      licenseInfo.value = response.data.license;
+    }
   } catch (error) {
     console.error('Erro ao carregar configurações:', error);
     useAlert('Erro ao carregar configurações do SDR IA');
   } finally {
     loading.value = false;
+  }
+};
+
+// Load license info (fallback)
+const loadLicenseInfo = async () => {
+  try {
+    const response = await axios.get(`/api/v1/accounts/${currentAccount.value.id}/sdr_ia/license_info`);
+    licenseInfo.value = response.data;
+  } catch (error) {
+    console.error('Erro ao carregar licença:', error);
+    licenseInfo.value = { has_license: false };
   }
 };
 
@@ -245,11 +271,19 @@ const toggleCloserActive = (index) => {
   settings.value.sdr_ia.round_robin.closers[index].active = !settings.value.sdr_ia.round_robin.closers[index].active;
 };
 
-onMounted(() => {
+onMounted(async () => {
   if (isAdmin.value) {
-    loadSettings();
-    loadStats();
-    loadTeams();
+    // Primeiro carrega settings (que inclui info de licença)
+    await loadSettings();
+    // Se não veio licença no settings, carrega separadamente
+    if (!licenseInfo.value) {
+      await loadLicenseInfo();
+    }
+    // Só carrega stats e teams se tiver licença válida
+    if (hasValidLicense.value) {
+      loadStats();
+      loadTeams();
+    }
   }
 });
 </script>
@@ -273,6 +307,69 @@ onMounted(() => {
       <woot-loading-state message="Carregando configurações..." />
     </div>
 
+    <!-- Tela para contas SEM licença ativa -->
+    <div v-else-if="!hasValidLicense" class="p-8 max-w-3xl mx-auto">
+      <div class="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-8 text-center">
+        <div class="text-6xl mb-6">🔒</div>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+          Módulo SDR IA não ativado
+        </h2>
+        <p class="text-slate-600 dark:text-slate-400 mb-6">
+          Esta conta não possui uma licença ativa para o módulo SDR IA.
+          Para ativar a qualificação automática de leads com Inteligência Artificial,
+          entre em contato com o administrador do sistema.
+        </p>
+
+        <div class="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6 mb-6">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+            O que você ganha com o SDR IA?
+          </h3>
+          <ul class="text-left text-slate-600 dark:text-slate-400 space-y-3">
+            <li class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>Qualificação automática de leads com IA</span>
+            </li>
+            <li class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>Sistema de scoring e classificação por temperatura</span>
+            </li>
+            <li class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>Distribuição automática para closers (Round Robin)</span>
+            </li>
+            <li class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>Perguntas personalizáveis por etapa do funil</span>
+            </li>
+            <li class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>Base de conhecimento integrada</span>
+            </li>
+          </ul>
+        </div>
+
+        <div v-if="licenseInfo" class="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          <p v-if="licenseInfo.message">{{ licenseInfo.message }}</p>
+          <p v-if="licenseInfo.license_details?.status === 'expired'" class="text-red-600 dark:text-red-400">
+            Sua licença expirou em {{ new Date(licenseInfo.license_details.expires_at).toLocaleDateString('pt-BR') }}
+          </p>
+          <p v-if="licenseInfo.license_details?.status === 'suspended'" class="text-orange-600 dark:text-orange-400">
+            Sua licença está suspensa. Entre em contato para reativar.
+          </p>
+        </div>
+
+        <div class="flex justify-center gap-4">
+          <a
+            href="mailto:suporte@seudominio.com"
+            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Solicitar Ativação
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interface completa para contas COM licença ativa -->
     <div v-else class="p-8 max-w-6xl">
       <!-- Estatísticas -->
       <div v-if="stats" class="mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
