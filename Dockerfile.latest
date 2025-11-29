@@ -61,7 +61,7 @@ FROM chatwoot/chatwoot:${CHATWOOT_VERSION}
 
 ARG CHATWOOT_VERSION
 ENV CHATWOOT_VERSION=${CHATWOOT_VERSION}
-ENV SDR_IA_VERSION=4.0.1
+ENV SDR_IA_VERSION=4.0.2
 
 LABEL maintainer="eversonsantos-dev"
 LABEL description="Chatwoot with SDR IA Module - Multi-tenant SaaS"
@@ -122,10 +122,19 @@ COPY --from=builder /app/public/vite /app/public/vite
 COPY --from=builder /app/public/assets /app/public/assets
 
 # ============================================================
-# ENTRYPOINT PERSONALIZADO
+# ENTRYPOINT PERSONALIZADO - Substitui o entrypoint do Chatwoot
 # ============================================================
 
-# Script de inicialização
+# Backup do entrypoint original e substituir pelo nosso
+RUN if [ -f /app/docker/entrypoints/rails.sh ]; then \
+      cp /app/docker/entrypoints/rails.sh /app/docker/entrypoints/rails.sh.original; \
+    fi
+
+# Copiar nosso entrypoint customizado como o principal
+COPY docker/entrypoint-sdr-saas.sh /app/docker/entrypoints/rails.sh
+RUN chmod +x /app/docker/entrypoints/rails.sh
+
+# Também copiar como rails-sdr.sh para compatibilidade
 COPY docker/entrypoint-sdr-saas.sh /app/docker/entrypoints/rails-sdr.sh
 RUN chmod +x /app/docker/entrypoints/rails-sdr.sh
 
@@ -147,5 +156,5 @@ RUN echo "=== SDR IA Module v${SDR_IA_VERSION} ===" && \
 
 WORKDIR /app
 
-# Usar o entrypoint personalizado
-ENTRYPOINT ["docker/entrypoints/rails-sdr.sh"]
+# O entrypoint rails.sh já foi substituído pelo nosso customizado
+# Não precisa definir ENTRYPOINT pois usamos o padrão do Chatwoot que chama rails.sh
