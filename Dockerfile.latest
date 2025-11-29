@@ -43,7 +43,8 @@ COPY frontend/routes/dashboard/settings/sdr-ia /app/app/javascript/dashboard/rou
 
 # Copiar script de injeção
 COPY scripts/inject_sdr_ia_frontend.sh /tmp/inject_sdr_ia_frontend.sh
-RUN chmod +x /tmp/inject_sdr_ia_frontend.sh
+# Converter CRLF para LF (compatibilidade Windows) e dar permissão de execução
+RUN sed -i 's/\r$//' /tmp/inject_sdr_ia_frontend.sh && chmod +x /tmp/inject_sdr_ia_frontend.sh
 
 # Executar injeção do SDR IA no frontend
 RUN /tmp/inject_sdr_ia_frontend.sh
@@ -117,7 +118,8 @@ COPY frontend/routes/dashboard/settings/sdr-ia /app/app/javascript/dashboard/rou
 
 # Copiar script de injeção do frontend
 COPY scripts/inject_sdr_ia_frontend.sh /app/scripts/inject_sdr_ia_frontend.sh
-RUN chmod +x /app/scripts/inject_sdr_ia_frontend.sh
+# Converter CRLF para LF (compatibilidade Windows) e dar permissão de execução
+RUN sed -i 's/\r$//' /app/scripts/inject_sdr_ia_frontend.sh && chmod +x /app/scripts/inject_sdr_ia_frontend.sh
 
 # Executar injeção do SDR IA no frontend (modifica arquivos originais do Chatwoot)
 RUN /app/scripts/inject_sdr_ia_frontend.sh
@@ -137,11 +139,12 @@ RUN if [ -f /app/docker/entrypoints/rails.sh ]; then \
 
 # Copiar nosso entrypoint customizado como o principal
 COPY docker/entrypoint-sdr-saas.sh /app/docker/entrypoints/rails.sh
-RUN chmod +x /app/docker/entrypoints/rails.sh
+# Converter CRLF para LF e dar permissão de execução
+RUN sed -i 's/\r$//' /app/docker/entrypoints/rails.sh && chmod +x /app/docker/entrypoints/rails.sh
 
 # Também copiar como rails-sdr.sh para compatibilidade
 COPY docker/entrypoint-sdr-saas.sh /app/docker/entrypoints/rails-sdr.sh
-RUN chmod +x /app/docker/entrypoints/rails-sdr.sh
+RUN sed -i 's/\r$//' /app/docker/entrypoints/rails-sdr.sh && chmod +x /app/docker/entrypoints/rails-sdr.sh
 
 # Ajustar permissões
 RUN chown -R chatwoot:chatwoot /app/plugins /app/tmp /app/log /app/db/migrate /app/scripts 2>/dev/null || true
