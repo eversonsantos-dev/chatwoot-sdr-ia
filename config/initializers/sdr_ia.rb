@@ -8,6 +8,15 @@
 # para capturar eventos de conversas e mensagens.
 
 Rails.application.config.to_prepare do
+  # Adicionar associação ao modelo Account (necessário para Super Admin)
+  begin
+    Account.class_eval do
+      has_one :sdr_ia_license, dependent: :destroy unless reflect_on_association(:sdr_ia_license)
+    end
+    Rails.logger.info "[SDR IA] Associação Account.has_one :sdr_ia_license adicionada"
+  rescue StandardError => e
+    Rails.logger.warn "[SDR IA] Não foi possível adicionar associação: #{e.message}"
+  end
   plugin_path = Rails.root.join('plugins/sdr_ia/lib/sdr_ia.rb')
 
   if File.exist?(plugin_path)

@@ -55,7 +55,7 @@ FROM chatwoot/chatwoot:${CHATWOOT_VERSION}
 
 ARG CHATWOOT_VERSION
 ENV CHATWOOT_VERSION=${CHATWOOT_VERSION}
-ENV SDR_IA_VERSION=4.0.14
+ENV SDR_IA_VERSION=4.0.15
 
 LABEL maintainer="eversonsantos-dev"
 LABEL description="Chatwoot with SDR IA Module - Multi-tenant SaaS"

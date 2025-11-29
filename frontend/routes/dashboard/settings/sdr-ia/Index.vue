@@ -459,20 +459,20 @@ onMounted(async () => {
               Oferta por tempo limitado
             </div>
 
-            <!-- Botão CTA Principal -->
+            <!-- Botão CTA Principal - GRANDE -->
             <div>
               <a
                 v-if="activationUrl"
                 :href="activationUrl"
                 target="_blank"
-                class="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 text-white text-xl font-bold rounded-2xl hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 transition-all transform hover:scale-105 shadow-2xl hover:shadow-green-500/25 animate-bounce"
+                class="inline-flex items-center gap-4 px-14 py-6 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 text-white text-2xl font-black rounded-3xl hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 transition-all transform hover:scale-110 shadow-2xl hover:shadow-green-500/40 animate-bounce border-4 border-white/30"
                 style="animation-duration: 2s;"
               >
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
                 <span>QUERO ATIVAR AGORA</span>
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
                 </svg>
               </a>
