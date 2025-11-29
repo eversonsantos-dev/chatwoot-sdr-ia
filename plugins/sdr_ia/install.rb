@@ -6,14 +6,16 @@
 puts "🚀 Instalando SDR IA Module para Chatwoot..."
 puts ""
 
-account = Account.first
+accounts = Account.all
 
-unless account
-  puts "❌ Nenhuma conta encontrada!"
-  exit 1
+if accounts.empty?
+  puts "⚠️ Nenhuma conta encontrada. Pulando instalação de custom attributes."
+  puts "Os atributos serão criados automaticamente quando houver contas."
+  exit 0
 end
 
-puts "📋 Criando Custom Attributes..."
+puts "📋 Encontradas #{accounts.count} conta(s). Criando Custom Attributes para todas..."
+puts ""
 
 custom_attrs = [
   { key: 'sdr_ia_status', name: 'SDR IA - Status', type: 'list', values: ['em_andamento', 'completo', 'incompleto', 'pausado', 'qualificado'] },
@@ -35,26 +37,6 @@ custom_attrs = [
   { key: 'estagio_funil', name: 'Estágio do Funil', type: 'list', values: ['Novo Lead', 'Contato Inicial', 'Lead Qualificado', 'Em Negociação', 'Pagamento Pendente', 'Fechado', 'Lead Esfriou', 'Lead Desqualificado'] }
 ]
 
-custom_attrs.each do |attr|
-  ca = account.custom_attribute_definitions.find_or_initialize_by(
-    attribute_key: attr[:key],
-    attribute_model: 'contact_attribute'
-  )
-
-  ca.attribute_display_name = attr[:name]
-  ca.attribute_display_type = attr[:type]
-  ca.attribute_values = attr[:values] if attr[:values]
-
-  if ca.save
-    puts "  ✅ #{attr[:name]}"
-  else
-    puts "  ⚠️  #{attr[:name]} - #{ca.errors.full_messages.join(', ')}"
-  end
-end
-
-puts ""
-puts "🏷️  Criando Tags Padrão..."
-
 labels = [
   'temperatura-quente',
   'temperatura-morno',
@@ -72,14 +54,39 @@ labels = [
   'urgencia-pesquisando'
 ]
 
-labels.each do |label_name|
-  label = account.labels.find_or_initialize_by(title: label_name)
+accounts.each do |account|
+  puts "🔧 Configurando Account ##{account.id} (#{account.name})..."
 
-  if label.save
-    puts "  ✅ #{label_name}"
-  else
-    puts "  ⚠️  #{label_name} - #{label.errors.full_messages.join(', ')}"
+  # Criar Custom Attributes
+  custom_attrs.each do |attr|
+    ca = account.custom_attribute_definitions.find_or_initialize_by(
+      attribute_key: attr[:key],
+      attribute_model: 'contact_attribute'
+    )
+
+    ca.attribute_display_name = attr[:name]
+    ca.attribute_display_type = attr[:type]
+    ca.attribute_values = attr[:values] if attr[:values]
+
+    if ca.save
+      puts "  ✅ Attr: #{attr[:name]}"
+    else
+      puts "  ⚠️  Attr: #{attr[:name]} - #{ca.errors.full_messages.join(', ')}"
+    end
   end
+
+  # Criar Labels
+  labels.each do |label_name|
+    label = account.labels.find_or_initialize_by(title: label_name)
+
+    if label.save
+      puts "  ✅ Label: #{label_name}"
+    else
+      puts "  ⚠️  Label: #{label_name} - #{label.errors.full_messages.join(', ')}"
+    end
+  end
+
+  puts ""
 end
 
 puts ""

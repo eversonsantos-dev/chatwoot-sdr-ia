@@ -79,19 +79,37 @@ if defined?(Rails)
       Rails.logger.info "[SDR IA] Rotas carregadas"
     end
 
+    # ============================================================
+    # CRÍTICO: Carregar LicenseValidator SEMPRE (controller precisa)
+    # Deve ser carregado ANTES de checar enabled? pois o controller
+    # usa essas classes mesmo quando o módulo está "desabilitado"
+    # ============================================================
+    begin
+      require Rails.root.join('plugins/sdr_ia/app/services/license_validator')
+      Rails.logger.info "[SDR IA] LicenseValidator carregado com sucesso"
+    rescue => e
+      Rails.logger.error "[SDR IA] Erro ao carregar LicenseValidator: #{e.message}"
+    end
+
     config_enabled = SdrIa.enabled?
 
     if config_enabled
-      Rails.logger.info "[SDR IA] Módulo habilitado. Registrando listener..."
+      Rails.logger.info "[SDR IA] Módulo habilitado. Carregando classes adicionais..."
 
       require Rails.root.join('plugins/sdr_ia/app/services/openai_client')
       require Rails.root.join('plugins/sdr_ia/app/services/lead_qualifier')
+      require Rails.root.join('plugins/sdr_ia/app/services/conversation_manager')
+      require Rails.root.join('plugins/sdr_ia/app/services/conversation_manager_v2')
+      require Rails.root.join('plugins/sdr_ia/app/services/message_buffer')
+      require Rails.root.join('plugins/sdr_ia/app/services/audio_transcriber')
+      require Rails.root.join('plugins/sdr_ia/app/services/round_robin_assigner')
       require Rails.root.join('plugins/sdr_ia/app/jobs/qualify_lead_job')
+      require Rails.root.join('plugins/sdr_ia/app/jobs/process_buffered_messages_job')
       require Rails.root.join('plugins/sdr_ia/app/listeners/sdr_ia_listener')
 
-      Rails.logger.info "[SDR IA] Classes carregadas. Listener pronto."
+      Rails.logger.info "[SDR IA] Todas as classes carregadas. Listener pronto."
     else
-      Rails.logger.info "[SDR IA] Módulo desabilitado (enabled: false no settings.yml)"
+      Rails.logger.info "[SDR IA] Módulo desabilitado (enabled: false). Classes adicionais não carregadas."
     end
   end
 end
