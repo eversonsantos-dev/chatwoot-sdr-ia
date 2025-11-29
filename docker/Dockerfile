@@ -1,22 +1,32 @@
 # ============================================================
 # Chatwoot SDR IA - Docker Image (Multi-Stage Build)
 # ============================================================
-# Imagem: Chatwoot original + Módulo SDR IA
-# Versão: 3.1.0
+# Imagem: Chatwoot original + Módulo SDR IA com SaaS Licensing
+# Versão: 4.0.1
 # ============================================================
 
-ARG CHATWOOT_VERSION=v4.1.0
+ARG CHATWOOT_VERSION=v4.8.0
 
 # ============================================================
 # STAGE 1: Builder - Compilar assets com Node.js
 # ============================================================
 FROM chatwoot/chatwoot:${CHATWOOT_VERSION} AS builder
 
+ARG CHATWOOT_VERSION
+ENV CHATWOOT_VERSION=${CHATWOOT_VERSION}
+
 USER root
 
-# Instalar Node.js e pnpm
-RUN apk add --no-cache nodejs npm && \
-    npm install -g pnpm@10.2.0
+# Instalar dependências necessárias
+RUN apk add --no-cache \
+    nodejs \
+    npm \
+    curl \
+    bash \
+    jq
+
+# Instalar pnpm na versão correta
+RUN npm install -g pnpm@10.2.0
 
 WORKDIR /app
 
@@ -25,8 +35,17 @@ COPY frontend/routes/dashboard/settings/sdr-ia /app/app/javascript/dashboard/rou
 COPY frontend/settings.routes.js /app/app/javascript/dashboard/routes/dashboard/settings/settings.routes.js
 COPY frontend/sidebar-settings.js /app/app/javascript/dashboard/components/layout/config/sidebarItems/settings.js
 
+# Adicionar traduções SDR IA
+RUN if [ -f /app/app/javascript/dashboard/i18n/locale/pt_BR/settings.json ]; then \
+    sed -i '/"INTEGRATIONS":/a\    "SDR_IA": "SDR IA",' /app/app/javascript/dashboard/i18n/locale/pt_BR/settings.json 2>/dev/null || true; \
+    fi
+
+RUN if [ -f /app/app/javascript/dashboard/i18n/locale/en/settings.json ]; then \
+    sed -i '/"INTEGRATIONS":/a\    "SDR_IA": "SDR AI",' /app/app/javascript/dashboard/i18n/locale/en/settings.json 2>/dev/null || true; \
+    fi
+
 # Instalar dependências e compilar assets
-RUN pnpm install --frozen-lockfile && \
+RUN pnpm install --frozen-lockfile || pnpm install && \
     SECRET_KEY_BASE=precompile_placeholder RAILS_ENV=production \
     bundle exec rake assets:precompile
 
@@ -35,9 +54,14 @@ RUN pnpm install --frozen-lockfile && \
 # ============================================================
 FROM chatwoot/chatwoot:${CHATWOOT_VERSION}
 
+ARG CHATWOOT_VERSION
+ENV CHATWOOT_VERSION=${CHATWOOT_VERSION}
+ENV SDR_IA_VERSION=4.0.1
+
 LABEL maintainer="eversonsantos-dev"
-LABEL description="Chatwoot with SDR IA Module"
-LABEL version="3.1.4"
+LABEL description="Chatwoot with SDR IA Module - Multi-tenant SaaS"
+LABEL version="${SDR_IA_VERSION}"
+LABEL chatwoot_version="${CHATWOOT_VERSION}"
 
 USER root
 
@@ -51,23 +75,30 @@ RUN mkdir -p /app/plugins/sdr_ia \
 # BACKEND - Módulo SDR IA
 # ============================================================
 
-# Plugin SDR IA
+# Plugin SDR IA completo
 COPY plugins/sdr_ia /app/plugins/sdr_ia
 
-# Model
+# Models
 COPY models/sdr_ia_config.rb /app/app/models/sdr_ia_config.rb
+COPY models/sdr_ia_license.rb /app/app/models/sdr_ia_license.rb
 
 # Controllers
 COPY controllers/api/v1/accounts/sdr_ia /app/app/controllers/api/v1/accounts/sdr_ia
 
-# Migration (ÚNICA - consolidada)
+# Super Admin (Dashboard de Licenças)
+COPY super_admin/dashboards/sdr_ia_license_dashboard.rb /app/app/dashboards/sdr_ia_license_dashboard.rb
+COPY super_admin/controllers/sdr_ia_licenses_controller.rb /app/app/controllers/super_admin/sdr_ia_licenses_controller.rb
+COPY super_admin/views/sdr_ia_licenses /app/app/views/super_admin/sdr_ia_licenses
+
+# Migrations - TODAS
 COPY db/migrate/20251120100000_create_sdr_ia_configs.rb /app/db/migrate/
+COPY db/migrate/20251129000001_create_sdr_ia_licenses.rb /app/db/migrate/
 
 # Initializer
 COPY config/initializers/sdr_ia.rb /app/config/initializers/sdr_ia.rb
 
-# Routes (Chatwoot completo + SDR IA)
-COPY config/routes.rb /app/config/routes.rb
+# Script de injeção de rotas dinâmico
+COPY scripts/inject_routes.rb /app/scripts/inject_routes.rb
 
 # Patch AsyncDispatcher
 COPY patches/async_dispatcher.rb /app/app/dispatchers/async_dispatcher.rb
@@ -89,20 +120,25 @@ COPY --from=builder /app/public/assets /app/public/assets
 # ENTRYPOINT PERSONALIZADO
 # ============================================================
 
-# Script de inicialização que executa migrations
-COPY docker/entrypoint-sdr.sh /app/docker/entrypoints/rails-sdr.sh
+# Script de inicialização SaaS
+COPY docker/entrypoint-sdr-saas.sh /app/docker/entrypoints/rails-sdr.sh
 RUN chmod +x /app/docker/entrypoints/rails-sdr.sh
 
 # Ajustar permissões
 RUN chown -R chatwoot:chatwoot /app/plugins /app/tmp /app/log /app/db/migrate 2>/dev/null || true
 
 # Verificação
-RUN echo "=== SDR IA Module ===" && \
+RUN echo "=== SDR IA Module v${SDR_IA_VERSION} ===" && \
+    echo "=== Chatwoot Version: ${CHATWOOT_VERSION} ===" && \
     ls -la /app/plugins/sdr_ia/ && \
-    ls -la /app/db/migrate/ | grep sdr && \
+    ls -la /app/db/migrate/ | grep -E "(sdr_ia|license)" && \
+    echo "=== Models ===" && \
+    ls -la /app/app/models/sdr_ia*.rb && \
+    echo "=== Super Admin Dashboard ===" && \
+    ls -la /app/app/dashboards/sdr_ia*.rb 2>/dev/null || echo "Dashboard OK" && \
     echo "=== Verificando assets compilados ===" && \
     ls -la /app/public/vite/assets/ | head -10 && \
-    echo "=== OK ==="
+    echo "=== Build OK ==="
 
 WORKDIR /app
 
