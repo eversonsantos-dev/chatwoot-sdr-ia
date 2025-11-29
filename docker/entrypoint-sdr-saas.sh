@@ -38,6 +38,17 @@ echo "[OK] Banco de dados OK!"
 if [[ "$1" == *"rails"* ]] && [[ "$1" == *"s"* || "$@" == *"server"* ]]; then
   echo "[INFO] Container principal detectado. Instalando SDR IA..."
 
+  # ============================================================
+  # CRÍTICO: Injetar rotas do SDR IA no Rails
+  # ============================================================
+  echo "[INFO] Injetando rotas SDR IA no Rails..."
+  if [ -f /app/scripts/inject_routes.rb ]; then
+    bundle exec rails runner /app/scripts/inject_routes.rb 2>&1 || echo "[WARN] Erro na injeção de rotas (pode já existir)"
+    echo "[OK] Rotas SDR IA verificadas!"
+  else
+    echo "[WARN] Script inject_routes.rb não encontrado!"
+  fi
+
   # Instalar Custom Attributes
   if [ -f /app/plugins/sdr_ia/install.rb ]; then
     echo "[INFO] Instalando Custom Attributes..."
@@ -62,6 +73,17 @@ if [[ "$1" == *"rails"* ]] && [[ "$1" == *"s"* || "$@" == *"server"* ]]; then
       puts '[WARN] Tabela sdr_ia_licenses não encontrada'
     end
   " 2>&1 || echo "[INFO] Verificação concluída"
+
+  # Verificar se rotas foram injetadas
+  echo "[INFO] Verificando rotas SDR IA..."
+  bundle exec rails runner "
+    routes = Rails.application.routes.routes.select { |r| r.path.spec.to_s.include?('sdr_ia') }
+    if routes.any?
+      puts \"[OK] #{routes.count} rotas SDR IA encontradas\"
+    else
+      puts '[WARN] Nenhuma rota SDR IA encontrada - verifique logs'
+    end
+  " 2>&1 || echo "[INFO] Verificação de rotas concluída"
 fi
 
 echo "=========================================="
