@@ -1,0 +1,125 @@
+version: "3.8"
+
+# ============================================================
+# Chatwoot SDR IA v4.0.0 - Multi-Tenant SaaS Stack
+# ============================================================
+# Baseado em Chatwoot v4.8.0 com sistema de licenciamento SaaS
+# ============================================================
+
+services:
+  chatwoot_app:
+    image: eversonsantosdev/chatwoot-sdr-ia-latest:4.0.0
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    environment:
+      # Rails
+      RAILS_ENV: production
+      NODE_ENV: production
+      INSTALLATION_ENV: docker
+      RAILS_LOG_TO_STDOUT: "true"
+
+      # Database
+      POSTGRES_HOST: chatwoot_postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DATABASE: chatwoot_production
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChatwootDB2024Seguro}
+
+      # Redis
+      REDIS_URL: redis://chatwoot_redis:6379
+
+      # App Config
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      FRONTEND_URL: ${FRONTEND_URL:-https://chat.seudominio.com}
+      DEFAULT_LOCALE: pt_BR
+
+      # SDR IA Config (opcional - desabilita validação de licença em dev)
+      # SDR_IA_SKIP_LICENSE_CHECK: "false"
+
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - chatwoot_internal
+      - network_public
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.chatwoot.rule=Host(`${CHATWOOT_DOMAIN:-chat.seudominio.com}`)
+        - traefik.http.routers.chatwoot.entrypoints=websecure
+        - traefik.http.routers.chatwoot.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.chatwoot.service=chatwoot
+        - traefik.http.services.chatwoot.loadbalancer.server.port=3000
+        - traefik.swarm.network=network_public
+
+  chatwoot_sidekiq:
+    image: eversonsantosdev/chatwoot-sdr-ia-latest:4.0.0
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      RAILS_ENV: production
+      NODE_ENV: production
+      INSTALLATION_ENV: docker
+      RAILS_LOG_TO_STDOUT: "true"
+      POSTGRES_HOST: chatwoot_postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DATABASE: chatwoot_production
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChatwootDB2024Seguro}
+      REDIS_URL: redis://chatwoot_redis:6379
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      FRONTEND_URL: ${FRONTEND_URL:-https://chat.seudominio.com}
+      DEFAULT_LOCALE: pt_BR
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+
+  chatwoot_postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: chatwoot_production
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChatwootDB2024Seguro}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+
+  chatwoot_redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - chatwoot_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+
+networks:
+  chatwoot_internal:
+    driver: overlay
+  network_public:
+    external: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  chatwoot_storage:
