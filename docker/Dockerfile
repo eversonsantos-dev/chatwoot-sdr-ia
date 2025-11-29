@@ -41,7 +41,7 @@ COPY scripts/inject_sdr_ia_frontend.sh /tmp/inject_sdr_ia_frontend.sh
 RUN sed -i 's/\r$//' /tmp/inject_sdr_ia_frontend.sh && chmod +x /tmp/inject_sdr_ia_frontend.sh
 
 # Executar injeção do SDR IA no frontend
-RUN /tmp/inject_sdr_ia_frontend.sh
+RUN bash /tmp/inject_sdr_ia_frontend.sh
 
 # Instalar dependências e compilar assets
 RUN pnpm install --frozen-lockfile || pnpm install && \
@@ -115,8 +115,11 @@ COPY scripts/inject_sdr_ia_frontend.sh /app/scripts/inject_sdr_ia_frontend.sh
 # Converter CRLF para LF (compatibilidade Windows) e dar permissão de execução
 RUN sed -i 's/\r$//' /app/scripts/inject_sdr_ia_frontend.sh && chmod +x /app/scripts/inject_sdr_ia_frontend.sh
 
+# Instalar bash (necessário para scripts)
+RUN apk add --no-cache bash
+
 # Executar injeção do SDR IA no frontend (modifica arquivos originais do Chatwoot)
-RUN /app/scripts/inject_sdr_ia_frontend.sh
+RUN bash /app/scripts/inject_sdr_ia_frontend.sh
 
 # Copiar assets compilados do stage builder
 COPY --from=builder /app/public/vite /app/public/vite
