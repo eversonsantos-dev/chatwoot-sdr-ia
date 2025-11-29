@@ -3,12 +3,12 @@
 # ============================================================
 # Este workflow automatiza:
 # - Build da imagem Docker
-# - Push para Docker Hub
+# - Push para Docker Hub (2 repositórios)
 # - Criação de Release no GitHub
 #
-# Triggers:
-# - Push de tags (v*.*.*) - Ex: v2.1.0, v2.1.1
-# - Manual via workflow_dispatch
+# Imagens publicadas:
+# - eversonsantosdev/chatwoot-sdr-ia (com tags de versão)
+# - eversonsantosdev/chatwoot-sdr-ia-latest (sempre latest)
 # ============================================================
 
 name: Build and Push Docker Image
@@ -34,6 +34,7 @@ on:
 env:
   REGISTRY: docker.io
   IMAGE_NAME: eversonsantosdev/chatwoot-sdr-ia
+  IMAGE_NAME_LATEST: eversonsantosdev/chatwoot-sdr-ia-latest
 
 jobs:
   build-and-push:
@@ -66,27 +67,37 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # ========================================
-      # 4. Extrair metadata (tags, labels)
+      # 4. Extrair metadata para imagem principal
       # ========================================
-      - name: Extract metadata
+      - name: Extract metadata (main image)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            # Tag semântica completa (v2.1.0)
             type=semver,pattern={{version}}
-            # Tag major.minor (v2.1)
             type=semver,pattern={{major}}.{{minor}}
-            # Tag major (v2)
             type=semver,pattern={{major}}
-            # Tag latest para a branch main
             type=raw,value=latest,enable={{is_default_branch}}
-            # Tag manual se usado workflow_dispatch
             type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       # ========================================
-      # 5. Determinar versão do Chatwoot
+      # 5. Extrair metadata para imagem -latest
+      # ========================================
+      - name: Extract metadata (latest image)
+        id: meta_latest
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME_LATEST }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+            type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
+
+      # ========================================
+      # 6. Determinar versão do Chatwoot
       # ========================================
       - name: Set Chatwoot version
         id: chatwoot
@@ -98,9 +109,9 @@ jobs:
           fi
 
       # ========================================
-      # 6. Build e Push da imagem
+      # 7. Build e Push da imagem principal
       # ========================================
-      - name: Build and push Docker image
+      - name: Build and push main image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -115,7 +126,23 @@ jobs:
           platforms: linux/amd64
 
       # ========================================
-      # 7. Criar Release no GitHub (apenas para tags)
+      # 8. Push para imagem -latest (reusa cache)
+      # ========================================
+      - name: Push to -latest image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.latest
+          push: true
+          tags: ${{ steps.meta_latest.outputs.tags }}
+          labels: ${{ steps.meta_latest.outputs.labels }}
+          build-args: |
+            CHATWOOT_VERSION=${{ steps.chatwoot.outputs.version }}
+          cache-from: type=gha
+          platforms: linux/amd64
+
+      # ========================================
+      # 9. Criar Release no GitHub (apenas para tags)
       # ========================================
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -125,13 +152,16 @@ jobs:
           body: |
             ## Chatwoot SDR IA ${{ github.ref_name }}
 
-            ### Docker Image
+            ### Docker Images
             ```bash
+            # Imagem principal (com versões)
             docker pull eversonsantosdev/chatwoot-sdr-ia:${{ github.ref_name }}
+
+            # Imagem latest (sempre atualizada)
+            docker pull eversonsantosdev/chatwoot-sdr-ia-latest:latest
             ```
 
             ### Atualização
-            Para atualizar sua instalação:
             ```bash
             docker service update --image eversonsantosdev/chatwoot-sdr-ia:${{ github.ref_name }} chatwoot_app
             docker service update --image eversonsantosdev/chatwoot-sdr-ia:${{ github.ref_name }} chatwoot_sidekiq
@@ -143,18 +173,24 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ========================================
-      # 8. Sumário do build
+      # 10. Sumário do build
       # ========================================
       - name: Build Summary
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Image Tags" >> $GITHUB_STEP_SUMMARY
+          echo "### Main Image Tags" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Pull Command" >> $GITHUB_STEP_SUMMARY
+          echo "### Latest Image Tags" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta_latest.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "docker pull eversonsantosdev/chatwoot-sdr-ia:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull eversonsantosdev/chatwoot-sdr-ia-latest:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
