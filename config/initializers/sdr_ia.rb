@@ -14,29 +14,32 @@ Rails.application.config.to_prepare do
     require plugin_path
     Rails.logger.info "[SDR IA] Carregando módulo SDR IA..."
 
-    if SdrIa.enabled?
-      begin
-        Rails.logger.info "[SDR IA] Módulo habilitado. Carregando classes..."
+    begin
+      Rails.logger.info "[SDR IA] Carregando classes essenciais..."
 
-        # Força o carregamento das classes do plugin
-        require Rails.root.join('plugins/sdr_ia/app/services/openai_client')
-        require Rails.root.join('plugins/sdr_ia/app/services/lead_qualifier')
-        require Rails.root.join('plugins/sdr_ia/app/services/conversation_manager')
-        require Rails.root.join('plugins/sdr_ia/app/services/conversation_manager_v2')
-        require Rails.root.join('plugins/sdr_ia/app/services/message_buffer')
-        require Rails.root.join('plugins/sdr_ia/app/services/audio_transcriber')
-        require Rails.root.join('plugins/sdr_ia/app/services/round_robin_assigner')
-        require Rails.root.join('plugins/sdr_ia/app/jobs/qualify_lead_job')
-        require Rails.root.join('plugins/sdr_ia/app/jobs/process_buffered_messages_job')
-        require Rails.root.join('plugins/sdr_ia/app/listeners/sdr_ia_listener')
+      # SEMPRE carregar classes essenciais (controller precisa delas)
+      require Rails.root.join('plugins/sdr_ia/app/services/license_validator')
+      require Rails.root.join('plugins/sdr_ia/app/services/openai_client')
+      require Rails.root.join('plugins/sdr_ia/app/services/lead_qualifier')
+      require Rails.root.join('plugins/sdr_ia/app/services/conversation_manager')
+      require Rails.root.join('plugins/sdr_ia/app/services/conversation_manager_v2')
+      require Rails.root.join('plugins/sdr_ia/app/services/message_buffer')
+      require Rails.root.join('plugins/sdr_ia/app/services/audio_transcriber')
+      require Rails.root.join('plugins/sdr_ia/app/services/round_robin_assigner')
+      require Rails.root.join('plugins/sdr_ia/app/jobs/qualify_lead_job')
+      require Rails.root.join('plugins/sdr_ia/app/jobs/process_buffered_messages_job')
+      require Rails.root.join('plugins/sdr_ia/app/listeners/sdr_ia_listener')
 
-        Rails.logger.info "[SDR IA] Classes carregadas. Listener será registrado pelo AsyncDispatcher."
-      rescue StandardError => e
-        Rails.logger.error "[SDR IA] Erro ao carregar classes: #{e.message}"
-        Rails.logger.error e.backtrace.join("\n")
+      Rails.logger.info "[SDR IA] Classes carregadas com sucesso!"
+
+      if SdrIa.enabled?
+        Rails.logger.info "[SDR IA] Módulo HABILITADO. Listener será registrado."
+      else
+        Rails.logger.info "[SDR IA] Módulo desabilitado (enabled: false)"
       end
-    else
-      Rails.logger.info "[SDR IA] Módulo desabilitado"
+    rescue StandardError => e
+      Rails.logger.error "[SDR IA] Erro ao carregar classes: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
     end
   else
     Rails.logger.warn "[SDR IA] Plugin não encontrado em #{plugin_path}"
