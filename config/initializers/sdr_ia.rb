@@ -9,46 +9,11 @@
 
 Rails.application.config.to_prepare do
   # Adicionar associação ao modelo Account (necessário para Super Admin)
-  begin
+  if defined?(Account) && !Account.reflect_on_association(:sdr_ia_license)
     Account.class_eval do
-      has_one :sdr_ia_license, dependent: :destroy unless reflect_on_association(:sdr_ia_license)
+      has_one :sdr_ia_license, dependent: :destroy
     end
     Rails.logger.info "[SDR IA] Associação Account.has_one :sdr_ia_license adicionada"
-  rescue StandardError => e
-    Rails.logger.warn "[SDR IA] Não foi possível adicionar associação: #{e.message}"
-  end
-
-  # Carregar Model SdrIaLicense
-  begin
-    model_path = Rails.root.join('app/models/sdr_ia_license.rb')
-    if File.exist?(model_path)
-      require_dependency model_path
-      Rails.logger.info "[SDR IA] Model SdrIaLicense carregado"
-    end
-  rescue StandardError => e
-    Rails.logger.warn "[SDR IA] Não foi possível carregar model: #{e.message}"
-  end
-
-  # Carregar Dashboard do Super Admin (Administrate)
-  begin
-    dashboard_path = Rails.root.join('app/dashboards/sdr_ia_license_dashboard.rb')
-    if File.exist?(dashboard_path)
-      require_dependency dashboard_path
-      Rails.logger.info "[SDR IA] Dashboard SdrIaLicenseDashboard carregado"
-    end
-  rescue StandardError => e
-    Rails.logger.warn "[SDR IA] Não foi possível carregar dashboard: #{e.message}"
-  end
-
-  # Carregar Controller do Super Admin
-  begin
-    controller_path = Rails.root.join('app/controllers/super_admin/sdr_ia_licenses_controller.rb')
-    if File.exist?(controller_path)
-      require_dependency controller_path
-      Rails.logger.info "[SDR IA] Controller SuperAdmin::SdrIaLicensesController carregado"
-    end
-  rescue StandardError => e
-    Rails.logger.warn "[SDR IA] Não foi possível carregar controller: #{e.message}"
   end
 
   plugin_path = Rails.root.join('plugins/sdr_ia/lib/sdr_ia.rb')
