@@ -51,9 +51,25 @@ if [[ "$1" == *"rails"* ]] && [[ "$1" == *"s"* || "$@" == *"server"* ]]; then
 
   # Instalar Custom Attributes
   if [ -f /app/plugins/sdr_ia/install.rb ]; then
-    echo "[INFO] Instalando Custom Attributes..."
-    bundle exec rails runner /app/plugins/sdr_ia/install.rb 2>&1 || echo "[INFO] Attributes já existem"
-    echo "[OK] Custom Attributes instalados!"
+    echo "[INFO] Instalando Custom Attributes SDR IA..."
+    INSTALL_OUTPUT=$(bundle exec rails runner /app/plugins/sdr_ia/install.rb 2>&1) || true
+    echo "$INSTALL_OUTPUT"
+
+    # Verificar se atributos foram criados
+    ATTR_COUNT=$(bundle exec rails runner "puts CustomAttributeDefinition.where(\"attribute_key LIKE 'sdr_ia%' OR attribute_key = 'estagio_funil'\").count" 2>/dev/null || echo "0")
+    if [ "$ATTR_COUNT" -gt "0" ] 2>/dev/null; then
+      echo "[OK] $ATTR_COUNT Custom Attributes SDR IA encontrados!"
+    else
+      echo "[WARN] Nenhum Custom Attribute SDR IA encontrado. Verificando contas..."
+      ACCOUNT_COUNT=$(bundle exec rails runner "puts Account.count" 2>/dev/null || echo "0")
+      if [ "$ACCOUNT_COUNT" -eq "0" ] 2>/dev/null; then
+        echo "[INFO] Nenhuma conta encontrada ainda. Atributos serão criados quando houver contas."
+      else
+        echo "[WARN] Existem $ACCOUNT_COUNT contas mas atributos não foram criados. Verifique logs."
+      fi
+    fi
+  else
+    echo "[WARN] Arquivo install.rb não encontrado em /app/plugins/sdr_ia/"
   fi
 
   # Verificar tabelas SDR IA
