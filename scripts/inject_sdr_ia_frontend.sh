@@ -71,19 +71,27 @@ echo "[3/4] Injetando SDR IA no Sidebar.vue..."
 if [ ! -f "$SIDEBAR_VUE" ]; then
     echo "[WARN] Sidebar.vue não encontrado. Versão antiga do Chatwoot?"
 else
-    if grep -q "SDR IA" "$SIDEBAR_VUE"; then
+    if grep -q "Settings SDR IA" "$SIDEBAR_VUE"; then
         echo "[INFO] SDR IA já está no Sidebar.vue"
     else
-        # Adicionar o item SDR IA antes de 'Settings Billing'
-        sed -i "/name: 'Settings Billing'/i\\
-        {\\
-          name: 'Settings SDR IA',\\
-          label: 'SDR IA',\\
-          icon: 'i-lucide-brain',\\
-          to: accountScopedRoute('sdr_ia_settings'),\\
-        }," "$SIDEBAR_VUE"
+        # Usar awk para inserir o item SDR IA depois do item Settings Security
+        awk '
+        /to: accountScopedRoute\('"'"'security_settings_index'"'"'\)/ {
+            print
+            getline  # pegar a linha },
+            print
+            print "        {"
+            print "          name: '"'"'Settings SDR IA'"'"',"
+            print "          label: '"'"'SDR IA'"'"',"
+            print "          icon: '"'"'i-lucide-brain'"'"',"
+            print "          to: accountScopedRoute('"'"'sdr_ia_settings'"'"'),"
+            print "        },"
+            next
+        }
+        { print }
+        ' "$SIDEBAR_VUE" > "$SIDEBAR_VUE.tmp" && mv "$SIDEBAR_VUE.tmp" "$SIDEBAR_VUE"
 
-        if grep -q "SDR IA" "$SIDEBAR_VUE"; then
+        if grep -q "Settings SDR IA" "$SIDEBAR_VUE"; then
             echo "[OK] SDR IA injetado no Sidebar.vue"
         else
             echo "[WARN] Falha ao injetar SDR IA no Sidebar.vue"
