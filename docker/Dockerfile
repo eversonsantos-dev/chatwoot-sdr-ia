@@ -55,7 +55,7 @@ FROM chatwoot/chatwoot:${CHATWOOT_VERSION}
 
 ARG CHATWOOT_VERSION
 ENV CHATWOOT_VERSION=${CHATWOOT_VERSION}
-ENV SDR_IA_VERSION=4.0.17
+ENV SDR_IA_VERSION=4.0.18
 
 LABEL maintainer="eversonsantos-dev"
 LABEL description="Chatwoot with SDR IA Module - Multi-tenant SaaS"
@@ -93,6 +93,7 @@ COPY super_admin/views/sdr_ia_licenses /app/app/views/super_admin/sdr_ia_license
 # Migrations - TODAS
 COPY db/migrate/20251120100000_create_sdr_ia_configs.rb /app/db/migrate/
 COPY db/migrate/20251129000001_create_sdr_ia_licenses.rb /app/db/migrate/
+COPY db/migrate/20251129200000_add_activation_url_to_sdr_ia_licenses.rb /app/db/migrate/
 
 # Initializer
 COPY config/initializers/sdr_ia.rb /app/config/initializers/sdr_ia.rb
