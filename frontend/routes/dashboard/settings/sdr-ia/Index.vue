@@ -451,24 +451,61 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- CTA -->
-          <div class="text-center">
-            <a
-              v-if="activationUrl"
-              :href="activationUrl"
-              target="_blank"
-              class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
-            >
-              <span>Ativar Agora</span>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-              </svg>
-            </a>
-            <p v-else class="text-slate-600 dark:text-slate-400">
-              Entre em contato com o administrador do sistema para ativar o módulo SDR IA.
-            </p>
-            <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
-              Comece agora e transforme seu atendimento com IA
+          <!-- CTA Agressivo -->
+          <div class="text-center space-y-4">
+            <!-- Urgência -->
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-sm font-medium animate-pulse">
+              <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+              Oferta por tempo limitado
+            </div>
+
+            <!-- Botão CTA Principal -->
+            <div>
+              <a
+                v-if="activationUrl"
+                :href="activationUrl"
+                target="_blank"
+                class="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 text-white text-xl font-bold rounded-2xl hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 transition-all transform hover:scale-105 shadow-2xl hover:shadow-green-500/25 animate-bounce"
+                style="animation-duration: 2s;"
+              >
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                <span>QUERO ATIVAR AGORA</span>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                </svg>
+              </a>
+              <p v-else class="text-slate-600 dark:text-slate-400 text-lg">
+                Entre em contato com o administrador para liberar o acesso.
+              </p>
+            </div>
+
+            <!-- Garantias -->
+            <div class="flex flex-wrap justify-center gap-4 mt-6 text-sm text-slate-600 dark:text-slate-400">
+              <div class="flex items-center gap-1">
+                <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span>Setup em minutos</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span>Suporte dedicado</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span>Cancele quando quiser</span>
+              </div>
+            </div>
+
+            <!-- Texto de urgência -->
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-4">
+              Mais de <strong class="text-slate-700 dark:text-slate-200">500 empresas</strong> já estão usando o SDR IA para multiplicar suas vendas
             </p>
           </div>
         </div>

@@ -132,8 +132,9 @@ class SuperAdmin::SdrIaLicensesController < SuperAdmin::ApplicationController
 
   private
 
+  # Sobrescrever método do Administrate para permitir todos os campos do formulário
   def resource_params
-    params.require(:sdr_ia_license).permit(
+    permitted = params.require(:sdr_ia_license).permit(
       :account_id,
       :license_type,
       :status,
@@ -152,7 +153,26 @@ class SuperAdmin::SdrIaLicensesController < SuperAdmin::ApplicationController
       :billing_email,
       :activation_url,
       :notes,
+      :stripe_customer_id,
+      :stripe_subscription_id,
       allowed_models: []
     )
+
+    # Garantir que allowed_models seja um array
+    if permitted[:allowed_models].is_a?(String)
+      permitted[:allowed_models] = permitted[:allowed_models].split(',').map(&:strip)
+    end
+
+    permitted
+  end
+
+  # Dashboard para Administrate
+  def dashboard
+    SdrIaLicenseDashboard
+  end
+
+  # Modelo para Administrate
+  def resource_class
+    SdrIaLicense
   end
 end
