@@ -24,7 +24,11 @@ const activeTab = ref('general'); // general, prompts, questions, scoring
 
 // License info
 const licenseInfo = ref(null);
-const activationUrl = ref(''); // URL customizada para ativação
+
+// URL de ativação vem do backend (configurada pelo Super Admin)
+const activationUrl = computed(() => {
+  return licenseInfo.value?.activation_url || null;
+});
 
 // Verificação SIMPLES de licença
 const hasValidLicense = computed(() => {
@@ -339,27 +343,19 @@ onMounted(async () => {
           </p>
         </div>
 
-        <!-- Campo para URL de ativação -->
-        <div class="mb-6">
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 text-left">
-            URL para solicitar ativação (opcional)
-          </label>
-          <input
-            v-model="activationUrl"
-            type="url"
-            placeholder="https://seusite.com/ativar-sdr-ia"
-            class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
-          />
-        </div>
-
+        <!-- Botão de ativação (URL configurada pelo Super Admin) -->
         <div class="flex justify-center">
           <a
-            :href="activationUrl || 'mailto:suporte@seudominio.com'"
-            :target="activationUrl ? '_blank' : '_self'"
+            v-if="activationUrl"
+            :href="activationUrl"
+            target="_blank"
             class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            {{ activationUrl ? 'Solicitar Ativação' : 'Entrar em Contato' }}
+            Solicitar Ativação
           </a>
+          <p v-else class="text-sm text-slate-500 dark:text-slate-400">
+            Entre em contato com o administrador do sistema para ativar o módulo SDR IA.
+          </p>
         </div>
       </div>
     </div>

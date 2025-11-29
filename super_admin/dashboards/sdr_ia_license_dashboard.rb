@@ -33,6 +33,7 @@ class SdrIaLicenseDashboard < Administrate::BaseDashboard
     stripe_customer_id: Field::String,
     stripe_subscription_id: Field::String,
     billing_email: Field::Email,
+    activation_url: Field::String.with_options(searchable: false),
     notes: Field::Text,
     created_at: Field::DateTime,
     updated_at: Field::DateTime
@@ -75,6 +76,7 @@ class SdrIaLicenseDashboard < Administrate::BaseDashboard
     stripe_customer_id
     stripe_subscription_id
     billing_email
+    activation_url
     notes
     created_at
     updated_at
@@ -96,6 +98,7 @@ class SdrIaLicenseDashboard < Administrate::BaseDashboard
     knowledge_base_enabled
     round_robin_enabled
     audio_transcription_enabled
+    activation_url
     suspension_reason
     billing_email
     notes

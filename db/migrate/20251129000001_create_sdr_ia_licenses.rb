@@ -40,6 +40,9 @@ class CreateSdrIaLicenses < ActiveRecord::Migration[7.0]
       t.string :stripe_subscription_id
       t.string :billing_email
 
+      # URL de ativação (configurada pelo Super Admin)
+      t.string :activation_url
+
       # Metadata
       t.jsonb :metadata, default: {}
       t.text :notes

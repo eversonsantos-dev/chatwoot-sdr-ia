@@ -108,7 +108,8 @@ module SdrIa
         return {
           has_license: false,
           status: 'none',
-          message: 'Nenhuma licença encontrada para esta conta'
+          message: 'Nenhuma licença encontrada para esta conta',
+          activation_url: nil
         }
       end
 
@@ -124,6 +125,7 @@ module SdrIa
         trial_days_remaining: license.trial_days_remaining,
         expires_at: license.expires_at,
         can_process: can_process_lead?,
+        activation_url: license.try(:activation_url),
         features: {
           custom_prompts: license.custom_prompts_enabled?,
           api_access: license.api_access_enabled?,
