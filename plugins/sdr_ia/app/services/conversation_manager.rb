@@ -2,7 +2,7 @@
 
 module SdrIa
   class ConversationManager
-    attr_reader :contact, :conversation, :config
+    attr_reader :contact, :conversation, :config, :license_validator
 
     PERGUNTAS = %w[nome interesse urgencia conhecimento motivacao localizacao].freeze
 
@@ -12,10 +12,17 @@ module SdrIa
       @account = account || contact.account
       @config = SdrIa.config(@account)
       @perguntas_config = @config.dig('perguntas_etapas') || load_perguntas_from_yaml
+      @license_validator = LicenseValidator.new(@account)
     end
 
     def process_message!
       Rails.logger.info "[SDR IA] Processando mensagem do contact #{contact.id}"
+
+      # Validar licença antes de processar
+      unless validate_license!
+        Rails.logger.warn "[SDR IA] Licença inválida ou limite atingido para account #{@account.id}"
+        return
+      end
 
       # Inicializar ou avançar progresso
       current_step = get_current_step
@@ -36,9 +43,22 @@ module SdrIa
           send_next_question(current_step)
         end
       end
+    rescue LicenseError => e
+      Rails.logger.warn "[SDR IA] Erro de licença: #{e.message}"
+      handle_license_error(e)
     rescue StandardError => e
       Rails.logger.error "[SDR IA] Erro ao processar mensagem: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
+    end
+
+    # Verifica se a conta pode processar leads
+    def can_process?
+      license_validator.can_process_lead?
+    end
+
+    # Retorna informações de uso da licença
+    def usage_info
+      license_validator.usage_info
     end
 
     private
@@ -128,6 +148,9 @@ module SdrIa
         # Aplicar labels e atribuir time se necessário
         apply_labels(analysis['tags_sugeridas']) if analysis['tags_sugeridas']
         assign_to_team(analysis) if should_assign_to_team?(analysis)
+
+        # Incrementar uso da licença (apenas após qualificação bem-sucedida)
+        increment_license_usage!
 
         Rails.logger.info "[SDR IA] Qualificação completa: #{analysis['temperatura']} - Score: #{analysis['score']}"
       else
@@ -253,6 +276,74 @@ module SdrIa
     rescue StandardError => e
       Rails.logger.error "[SDR IA] Erro ao carregar perguntas YAML: #{e.message}"
       {}
+    end
+
+    # ============================================
+    # Métodos de Validação de Licença
+    # ============================================
+
+    def validate_license!
+      return true unless license_validation_enabled?
+
+      license_validator.validate!
+      true
+    rescue LicenseError
+      false
+    end
+
+    def license_validation_enabled?
+      # Permite desabilitar validação de licença via variável de ambiente (para desenvolvimento)
+      ENV['SDR_IA_SKIP_LICENSE_CHECK'] != 'true'
+    end
+
+    def handle_license_error(error)
+      case error
+      when TrialExpiredError
+        send_license_expired_message(:trial)
+      when LicenseExpiredError
+        send_license_expired_message(:license)
+      when UsageLimitError
+        send_usage_limit_message
+      when LicenseSuspendedError
+        Rails.logger.warn "[SDR IA] Conta suspensa: #{error.message}"
+      else
+        Rails.logger.warn "[SDR IA] Erro de licença não tratado: #{error.message}"
+      end
+    end
+
+    def send_license_expired_message(type)
+      # Não enviar mensagem ao cliente sobre problemas internos
+      # Apenas registrar no log
+      message = type == :trial ? 'Período de teste expirado' : 'Licença expirada'
+      Rails.logger.warn "[SDR IA] #{message} para account #{@account.id}"
+
+      # Atualizar status do contato
+      contact.custom_attributes['sdr_ia_status'] = 'licenca_expirada'
+      contact.save!
+    end
+
+    def send_usage_limit_message
+      Rails.logger.warn "[SDR IA] Limite de uso atingido para account #{@account.id}"
+
+      # Atualizar status do contato
+      contact.custom_attributes['sdr_ia_status'] = 'limite_atingido'
+      contact.save!
+    end
+
+    # Incrementar uso após qualificação bem-sucedida
+    def increment_license_usage!
+      return unless license_validation_enabled?
+
+      license_validator.increment_usage!
+      Rails.logger.info "[SDR IA] Uso incrementado para account #{@account.id}"
+    rescue StandardError => e
+      Rails.logger.error "[SDR IA] Erro ao incrementar uso: #{e.message}"
+    end
+
+    # Verificar se modelo OpenAI é permitido pela licença
+    def get_allowed_openai_model
+      requested_model = @config.dig('openai', 'model') || 'gpt-3.5-turbo'
+      license_validator.get_allowed_model(requested_model)
     end
   end
 end

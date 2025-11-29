@@ -7,6 +7,126 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
+## [4.0.0] - 2025-11-29 - MULTI-TENANT SAAS
+
+### Status da Versao
+- **MAJOR RELEASE - MULTI-TENANT SAAS**
+- Data: 29 de Novembro de 2025
+- Tag Git: `v4.0.0`
+- Docker Hub: `eversonsantosdev/chatwoot-sdr-ia-latest` (sempre ultima versao do Chatwoot)
+- Chatwoot Base: `v4.8.0`
+
+### Novidades Principais
+
+#### Sistema de Licenciamento SaaS Multi-Tenant
+O modulo SDR IA agora suporta multiplos tenants (contas) com controle individual de licenca:
+
+- **Tipos de Licenca:** Trial, Basic, Pro, Enterprise
+- **Controle de Uso:** Limite mensal de leads por conta
+- **Features por Plano:** Modelos OpenAI, Base de Conhecimento, Round Robin
+- **Gerenciamento via Super Admin:** Dashboard completo para administrar licencas
+
+#### Planos Disponiveis
+
+| Plano | Leads/Mes | Modelos | Features |
+|-------|-----------|---------|----------|
+| Trial | 50 | GPT-3.5 | Basico (14 dias) |
+| Basic | 200 | GPT-3.5, GPT-4 | Prompts customizados |
+| Pro | 1000 | GPT-3.5, GPT-4, GPT-4-Turbo | Tudo + API + Base de Conhecimento |
+| Enterprise | Ilimitado | Todos | Tudo + Suporte dedicado |
+
+#### Dashboard Super Admin
+
+Nova interface para gerenciar licencas SDR IA:
+- Listar todas as licencas
+- Criar trials para contas
+- Upgrade/Downgrade de planos
+- Suspender/Reativar licencas
+- Resetar contadores de uso
+- Estender periodos de trial
+- Estatisticas de uso global
+
+#### Compatibilidade Dinamica com Chatwoot
+
+- **Dockerfile Dinamico:** Suporta qualquer versao do Chatwoot via `--build-arg`
+- **Injecao de Rotas:** Script automatico para adicionar rotas SDR IA
+- **Assets Compilados:** Multi-stage build para frontend Vue.js
+- **Migrations Automaticas:** Entrypoint atualizado para criar tabelas
+
+### Nova Estrutura de Arquivos
+
+```
+db/migrate/
+  20251129000001_create_sdr_ia_licenses.rb
+
+models/
+  sdr_ia_license.rb
+
+plugins/sdr_ia/app/services/
+  license_validator.rb
+
+super_admin/
+  dashboards/sdr_ia_license_dashboard.rb
+  controllers/sdr_ia_licenses_controller.rb
+  views/sdr_ia_licenses/
+
+scripts/
+  inject_routes.rb
+```
+
+### API Endpoints
+
+Novos endpoints para licenciamento:
+
+```
+GET  /api/v1/accounts/:id/sdr_ia/license  - Info da licenca
+```
+
+Super Admin:
+```
+GET    /super_admin/sdr_ia_licenses       - Listar licencas
+POST   /super_admin/sdr_ia_licenses       - Criar licenca
+GET    /super_admin/sdr_ia_licenses/stats - Estatisticas
+POST   /super_admin/sdr_ia_licenses/:id/suspend    - Suspender
+POST   /super_admin/sdr_ia_licenses/:id/reactivate - Reativar
+POST   /super_admin/sdr_ia_licenses/:id/upgrade    - Upgrade
+POST   /super_admin/sdr_ia_licenses/:id/extend_trial - Estender trial
+POST   /super_admin/sdr_ia_licenses/:id/reset_usage  - Resetar uso
+```
+
+### Variaveis de Ambiente
+
+Nova variavel opcional:
+```
+SDR_IA_SKIP_LICENSE_CHECK=true  # Desabilita validacao de licenca (dev)
+```
+
+### Docker
+
+Nova imagem que sempre usa a ultima versao do Chatwoot:
+```bash
+# Build com ultima versao
+docker build -f Dockerfile.latest -t eversonsantosdev/chatwoot-sdr-ia-latest .
+
+# Build com versao especifica
+docker build -f Dockerfile.latest --build-arg CHATWOOT_VERSION=v4.8.0 -t eversonsantosdev/chatwoot-sdr-ia-latest .
+```
+
+### Breaking Changes
+
+- Modelo `SdrIaConfig` agora verifica licenca antes de processar
+- Novas migrations obrigatorias (`sdr_ia_licenses`)
+- Accounts sem licenca nao podem usar o modulo
+
+### Upgrade de Versoes Anteriores
+
+1. Fazer backup do banco de dados
+2. Atualizar para nova imagem
+3. Executar migrations: `bundle exec rails db:migrate`
+4. Criar licencas para contas existentes via Super Admin
+
+---
+
 ## [3.1.4] - 2025-11-27 - CORRECAO CUSTOM ATTRIBUTES
 
 ### Status da Versao

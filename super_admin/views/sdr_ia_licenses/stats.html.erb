@@ -1,0 +1,138 @@
+<%# Página de estatísticas das licenças SDR IA %>
+<header class="main-content__header">
+  <h1 class="main-content__page-title">SDR IA - Estatísticas</h1>
+  <div>
+    <%= link_to "Voltar para Licenças", super_admin_sdr_ia_licenses_path, class: "button" %>
+  </div>
+</header>
+
+<section class="main-content__body">
+  <!-- Cards de Resumo -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+    <div class="stat-card p-6 bg-white rounded-lg shadow">
+      <div class="text-3xl font-bold text-blue-600"><%= @stats[:total] %></div>
+      <div class="text-gray-600">Total de Licenças</div>
+    </div>
+
+    <div class="stat-card p-6 bg-white rounded-lg shadow">
+      <div class="text-3xl font-bold text-green-600"><%= @stats[:active] %></div>
+      <div class="text-gray-600">Ativas</div>
+    </div>
+
+    <div class="stat-card p-6 bg-white rounded-lg shadow">
+      <div class="text-3xl font-bold text-yellow-600"><%= @stats[:trials] %></div>
+      <div class="text-gray-600">Em Trial</div>
+    </div>
+
+    <div class="stat-card p-6 bg-white rounded-lg shadow">
+      <div class="text-3xl font-bold text-purple-600"><%= @stats[:paid] %></div>
+      <div class="text-gray-600">Pagas</div>
+    </div>
+  </div>
+
+  <!-- Alertas -->
+  <% if @stats[:expiring_soon] > 0 || @stats[:trial_expiring] > 0 %>
+    <div class="alerts mb-8 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+      <h3 class="font-semibold text-yellow-800">Atenção</h3>
+      <ul class="mt-2 text-yellow-700">
+        <% if @stats[:trial_expiring] > 0 %>
+          <li><%= @stats[:trial_expiring] %> trial(s) expirando nos próximos 3 dias</li>
+        <% end %>
+        <% if @stats[:expiring_soon] > 0 %>
+          <li><%= @stats[:expiring_soon] %> licença(s) expirando nos próximos 7 dias</li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Por Tipo -->
+    <div class="chart-container p-6 bg-white rounded-lg shadow">
+      <h3 class="text-lg font-semibold mb-4">Por Tipo de Licença</h3>
+      <table class="w-full">
+        <thead>
+          <tr class="border-b">
+            <th class="text-left py-2">Tipo</th>
+            <th class="text-right py-2">Quantidade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @stats[:by_type].each do |type, count| %>
+            <tr class="border-b">
+              <td class="py-2">
+                <span class="inline-flex items-center px-2 py-1 rounded text-sm
+                  <%= case type
+                      when 'trial' then 'bg-yellow-100 text-yellow-800'
+                      when 'basic' then 'bg-blue-100 text-blue-800'
+                      when 'pro' then 'bg-purple-100 text-purple-800'
+                      when 'enterprise' then 'bg-green-100 text-green-800'
+                      end %>">
+                  <%= type.titleize %>
+                </span>
+              </td>
+              <td class="text-right py-2 font-semibold"><%= count %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Por Status -->
+    <div class="chart-container p-6 bg-white rounded-lg shadow">
+      <h3 class="text-lg font-semibold mb-4">Por Status</h3>
+      <table class="w-full">
+        <thead>
+          <tr class="border-b">
+            <th class="text-left py-2">Status</th>
+            <th class="text-right py-2">Quantidade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @stats[:by_status].each do |status, count| %>
+            <tr class="border-b">
+              <td class="py-2">
+                <span class="inline-flex items-center px-2 py-1 rounded text-sm
+                  <%= case status
+                      when 'active' then 'bg-green-100 text-green-800'
+                      when 'suspended' then 'bg-yellow-100 text-yellow-800'
+                      when 'expired' then 'bg-red-100 text-red-800'
+                      when 'cancelled' then 'bg-gray-100 text-gray-800'
+                      end %>">
+                  <%= status.titleize %>
+                </span>
+              </td>
+              <td class="text-right py-2 font-semibold"><%= count %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Uso Total -->
+  <div class="mt-8 p-6 bg-white rounded-lg shadow">
+    <h3 class="text-lg font-semibold mb-4">Uso Total Este Mês</h3>
+    <div class="text-4xl font-bold text-blue-600">
+      <%= number_with_delimiter(@stats[:total_usage_this_month]) %>
+    </div>
+    <div class="text-gray-600">leads processados</div>
+  </div>
+
+  <!-- Ações em Massa -->
+  <div class="mt-8 p-6 bg-gray-50 rounded-lg">
+    <h3 class="text-lg font-semibold mb-4">Ações de Manutenção</h3>
+    <div class="flex gap-4">
+      <%= button_to "Expirar Trials Vencidos",
+          expire_trials_super_admin_sdr_ia_licenses_path,
+          method: :post,
+          class: "button button--warning",
+          data: { confirm: "Isso irá expirar todos os trials vencidos. Continuar?" } %>
+
+      <%= button_to "Resetar Contadores Mensais",
+          reset_all_usage_super_admin_sdr_ia_licenses_path,
+          method: :post,
+          class: "button button--secondary",
+          data: { confirm: "Isso irá resetar todos os contadores de uso. Use apenas no início do mês. Continuar?" } %>
+    </div>
+  </div>
+</section>
