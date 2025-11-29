@@ -150,6 +150,7 @@ class SuperAdmin::SdrIaLicensesController < SuperAdmin::ApplicationController
       :audio_transcription_enabled,
       :suspension_reason,
       :billing_email,
+      :activation_url,
       :notes,
       allowed_models: []
     )

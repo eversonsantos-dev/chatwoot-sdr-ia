@@ -313,49 +313,164 @@ onMounted(async () => {
       <woot-loading-state message="Carregando configurações..." />
     </div>
 
-    <!-- Tela para contas SEM licença ativa -->
-    <div v-else-if="!hasValidLicense" class="p-8 max-w-2xl mx-auto">
-      <div class="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-8 text-center">
-        <div class="text-5xl mb-4">🔒</div>
-        <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">
-          Módulo SDR IA não ativado
-        </h2>
-        <p class="text-slate-600 dark:text-slate-400 mb-6">
-          Esta conta não possui uma licença ativa para o SDR IA.
-        </p>
+    <!-- Tela para contas SEM licença ativa - Card Comercial -->
+    <div v-else-if="!hasValidLicense" class="p-8 max-w-4xl mx-auto">
+      <div class="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 rounded-2xl shadow-2xl p-1">
+        <div class="bg-white dark:bg-slate-900 rounded-xl p-8">
+          <!-- Header -->
+          <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4 shadow-lg">
+              <span class="text-4xl">🤖</span>
+            </div>
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              SDR IA - Qualificação Inteligente
+            </h2>
+            <p class="text-lg text-slate-600 dark:text-slate-400">
+              Transforme conversas em vendas com Inteligência Artificial
+            </p>
+          </div>
 
-        <!-- Status da licença se existir -->
-        <div v-if="licenseInfo && licenseInfo.status" class="mb-6 p-4 rounded-lg"
-             :class="{
-               'bg-red-50 dark:bg-red-900/20': licenseInfo.status === 'expired',
-               'bg-orange-50 dark:bg-orange-900/20': licenseInfo.status === 'suspended',
-               'bg-slate-50 dark:bg-slate-700/50': !['expired', 'suspended'].includes(licenseInfo.status)
-             }">
-          <p class="text-sm font-medium"
-             :class="{
-               'text-red-700 dark:text-red-300': licenseInfo.status === 'expired',
-               'text-orange-700 dark:text-orange-300': licenseInfo.status === 'suspended',
-               'text-slate-700 dark:text-slate-300': !['expired', 'suspended'].includes(licenseInfo.status)
-             }">
-            Status: {{ licenseInfo.status === 'expired' ? 'Expirada' :
-                       licenseInfo.status === 'suspended' ? 'Suspensa' :
-                       licenseInfo.status === 'cancelled' ? 'Cancelada' : licenseInfo.status }}
-          </p>
-        </div>
+          <!-- Status da licença se existir -->
+          <div v-if="licenseInfo && licenseInfo.status && licenseInfo.status !== 'none'" class="mb-6 p-4 rounded-lg text-center"
+               :class="{
+                 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800': licenseInfo.status === 'expired',
+                 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800': licenseInfo.status === 'suspended',
+                 'bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-700': !['expired', 'suspended'].includes(licenseInfo.status)
+               }">
+            <p class="text-sm font-medium"
+               :class="{
+                 'text-red-700 dark:text-red-300': licenseInfo.status === 'expired',
+                 'text-orange-700 dark:text-orange-300': licenseInfo.status === 'suspended',
+                 'text-slate-700 dark:text-slate-300': !['expired', 'suspended'].includes(licenseInfo.status)
+               }">
+              {{ licenseInfo.status === 'expired' ? 'Sua licença expirou. Renove para continuar aproveitando!' :
+                 licenseInfo.status === 'suspended' ? 'Licença suspensa. Entre em contato para regularizar.' :
+                 licenseInfo.status === 'cancelled' ? 'Licença cancelada.' : '' }}
+            </p>
+          </div>
 
-        <!-- Botão de ativação (URL configurada pelo Super Admin) -->
-        <div class="flex justify-center">
-          <a
-            v-if="activationUrl"
-            :href="activationUrl"
-            target="_blank"
-            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Solicitar Ativação
-          </a>
-          <p v-else class="text-sm text-slate-500 dark:text-slate-400">
-            Entre em contato com o administrador do sistema para ativar o módulo SDR IA.
-          </p>
+          <!-- Features Grid -->
+          <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <!-- Feature 1 -->
+            <div class="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+              <div class="flex-shrink-0 w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                <span class="text-2xl">🎯</span>
+              </div>
+              <div>
+                <h3 class="font-semibold text-slate-900 dark:text-slate-100 mb-1">Qualificação Automática</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  IA analisa conversas e classifica leads automaticamente em Quente, Morno ou Frio
+                </p>
+              </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+              <div class="flex-shrink-0 w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                <span class="text-2xl">⚡</span>
+              </div>
+              <div>
+                <h3 class="font-semibold text-slate-900 dark:text-slate-100 mb-1">Respostas em Tempo Real</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  GPT-4 gera respostas personalizadas baseadas na sua base de conhecimento
+                </p>
+              </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+              <div class="flex-shrink-0 w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                <span class="text-2xl">🔄</span>
+              </div>
+              <div>
+                <h3 class="font-semibold text-slate-900 dark:text-slate-100 mb-1">Round Robin Inteligente</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  Distribui leads qualificados automaticamente entre seus closers
+                </p>
+              </div>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+              <div class="flex-shrink-0 w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                <span class="text-2xl">📊</span>
+              </div>
+              <div>
+                <h3 class="font-semibold text-slate-900 dark:text-slate-100 mb-1">Score de Qualificação</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  Sistema de pontuação customizável para identificar os melhores leads
+                </p>
+              </div>
+            </div>
+
+            <!-- Feature 5 -->
+            <div class="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+              <div class="flex-shrink-0 w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                <span class="text-2xl">🎙️</span>
+              </div>
+              <div>
+                <h3 class="font-semibold text-slate-900 dark:text-slate-100 mb-1">Transcrição de Áudio</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  Converte mensagens de voz em texto para análise completa da conversa
+                </p>
+              </div>
+            </div>
+
+            <!-- Feature 6 -->
+            <div class="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+              <div class="flex-shrink-0 w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
+                <span class="text-2xl">📚</span>
+              </div>
+              <div>
+                <h3 class="font-semibold text-slate-900 dark:text-slate-100 mb-1">Base de Conhecimento</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  Configure informações da empresa para respostas precisas e consistentes
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Benefits -->
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-6 mb-8">
+            <h3 class="font-semibold text-slate-900 dark:text-slate-100 mb-4 text-center">
+              Por que usar o SDR IA?
+            </h3>
+            <div class="grid md:grid-cols-3 gap-4 text-center">
+              <div>
+                <div class="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">+40%</div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Aumento na conversão</p>
+              </div>
+              <div>
+                <div class="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">-60%</div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Tempo de qualificação</p>
+              </div>
+              <div>
+                <div class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">24/7</div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Atendimento automático</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="text-center">
+            <a
+              v-if="activationUrl"
+              :href="activationUrl"
+              target="_blank"
+              class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
+            >
+              <span>Ativar Agora</span>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+              </svg>
+            </a>
+            <p v-else class="text-slate-600 dark:text-slate-400">
+              Entre em contato com o administrador do sistema para ativar o módulo SDR IA.
+            </p>
+            <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
+              Comece agora e transforme seu atendimento com IA
+            </p>
+          </div>
         </div>
       </div>
     </div>
