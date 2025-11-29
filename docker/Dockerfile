@@ -2,7 +2,7 @@
 # Chatwoot SDR IA - Docker Image (Multi-Stage Build)
 # ============================================================
 # Imagem: Chatwoot original + Módulo SDR IA com SaaS Licensing
-# Versão: 4.0.4
+# Versão: 4.0.6
 # IMPORTANTE: Compatível com Chatwoot v4.8.0+ (nova arquitetura)
 # ============================================================
 
@@ -55,7 +55,7 @@ FROM chatwoot/chatwoot:${CHATWOOT_VERSION}
 
 ARG CHATWOOT_VERSION
 ENV CHATWOOT_VERSION=${CHATWOOT_VERSION}
-ENV SDR_IA_VERSION=4.0.5
+ENV SDR_IA_VERSION=4.0.6
 
 LABEL maintainer="eversonsantos-dev"
 LABEL description="Chatwoot with SDR IA Module - Multi-tenant SaaS"
@@ -97,8 +97,20 @@ COPY db/migrate/20251129000001_create_sdr_ia_licenses.rb /app/db/migrate/
 # Initializer
 COPY config/initializers/sdr_ia.rb /app/config/initializers/sdr_ia.rb
 
-# Script de injeção de rotas dinâmico
+# Scripts de injeção de rotas
 COPY scripts/inject_routes.rb /app/scripts/inject_routes.rb
+COPY scripts/inject_routes.sh /app/scripts/inject_routes.sh
+
+# Instalar bash (necessário para scripts de injeção)
+RUN apk add --no-cache bash
+
+# Converter CRLF para LF e dar permissão de execução
+RUN sed -i 's/\r$//' /app/scripts/inject_routes.sh && chmod +x /app/scripts/inject_routes.sh
+
+# ============================================================
+# CRÍTICO: Injetar rotas SDR IA no routes.rb (BUILD TIME)
+# ============================================================
+RUN bash /app/scripts/inject_routes.sh
 
 # Patch AsyncDispatcher
 COPY patches/async_dispatcher.rb /app/app/dispatchers/async_dispatcher.rb
@@ -114,9 +126,6 @@ COPY frontend/routes/dashboard/settings/sdr-ia /app/app/javascript/dashboard/rou
 COPY scripts/inject_sdr_ia_frontend.sh /app/scripts/inject_sdr_ia_frontend.sh
 # Converter CRLF para LF (compatibilidade Windows) e dar permissão de execução
 RUN sed -i 's/\r$//' /app/scripts/inject_sdr_ia_frontend.sh && chmod +x /app/scripts/inject_sdr_ia_frontend.sh
-
-# Instalar bash (necessário para scripts)
-RUN apk add --no-cache bash
 
 # Executar injeção do SDR IA no frontend (modifica arquivos originais do Chatwoot)
 RUN bash /app/scripts/inject_sdr_ia_frontend.sh
@@ -163,8 +172,12 @@ RUN echo "=== SDR IA Module v${SDR_IA_VERSION} ===" && \
     echo "=== Verificando injeção no Sidebar ===" && \
     (grep -q "SDR IA" /app/app/javascript/dashboard/components-next/sidebar/Sidebar.vue && echo "[OK] SDR IA no Sidebar.vue" || echo "[WARN] SDR IA não encontrado no Sidebar.vue") && \
     echo "" && \
-    echo "=== Verificando injeção nas rotas ===" && \
-    (grep -q "sdr-ia" /app/app/javascript/dashboard/routes/dashboard/settings/settings.routes.js && echo "[OK] SDR IA nas rotas" || echo "[WARN] SDR IA não encontrado nas rotas") && \
+    echo "=== Verificando injeção nas rotas frontend ===" && \
+    (grep -q "sdr-ia" /app/app/javascript/dashboard/routes/dashboard/settings/settings.routes.js && echo "[OK] SDR IA nas rotas frontend" || echo "[WARN] SDR IA não encontrado nas rotas frontend") && \
+    echo "" && \
+    echo "=== Verificando injeção nas rotas backend (routes.rb) ===" && \
+    (grep -q "namespace :sdr_ia" /app/config/routes.rb && echo "[OK] SDR IA nas rotas backend" || echo "[ERROR] SDR IA NÃO encontrado em routes.rb") && \
+    (grep -q "sdr_ia_licenses" /app/config/routes.rb && echo "[OK] Licenças SDR IA nas rotas super_admin" || echo "[WARN] Licenças SDR IA não encontrado em routes.rb") && \
     echo "" && \
     echo "=== Assets Compilados ===" && \
     ls -la /app/public/vite/assets/ | head -5 && \
