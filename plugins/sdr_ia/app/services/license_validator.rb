@@ -101,10 +101,20 @@ module SdrIa
     end
 
     # Informações de uso para exibição
+    # SEMPRE retorna um objeto, nunca nil
     def usage_info
-      return nil unless license
+      # Se não tem licença, retorna objeto indicando isso
+      unless license
+        return {
+          has_license: false,
+          status: 'none',
+          message: 'Nenhuma licença encontrada para esta conta'
+        }
+      end
 
+      # Se tem licença, retorna informações completas
       {
+        has_license: true,
         license_type: license.license_type,
         status: license.status,
         monthly_limit: license.monthly_lead_limit,

@@ -143,14 +143,17 @@ class Api::V1::Accounts::SdrIa::SettingsController < Api::V1::Accounts::BaseCont
   end
 
   def validate_license!
-    SdrIa::LicenseValidator.validate!(Current.account)
-  rescue SdrIa::LicenseError => e
-    render json: {
-      success: false,
-      error: e.message,
-      license_error: true,
-      license: SdrIa::LicenseValidator.usage_info(Current.account)
-    }, status: :forbidden
+    license_info = SdrIa::LicenseValidator.usage_info(Current.account)
+
+    # Validação simplificada: só precisa ter licença ativa
+    unless license_info[:has_license] && license_info[:status] == 'active'
+      render json: {
+        success: false,
+        error: license_info[:message] || 'Licença SDR IA não ativa para esta conta',
+        license_error: true,
+        license: license_info
+      }, status: :forbidden
+    end
   end
 
   def validate_features_in_params!

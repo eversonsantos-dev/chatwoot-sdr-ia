@@ -24,13 +24,15 @@ const activeTab = ref('general'); // general, prompts, questions, scoring
 
 // License info
 const licenseInfo = ref(null);
+const activationUrl = ref(''); // URL customizada para ativação
+
+// Verificação SIMPLES de licença
 const hasValidLicense = computed(() => {
   if (!licenseInfo.value) return false;
-  // has_license é retornado pelo backend
+  // Backend agora retorna has_license: true/false explicitamente
   if (licenseInfo.value.has_license === false) return false;
-  // Verificar se pode processar (status ativo, não expirado)
-  if (licenseInfo.value.can_process === false) return false;
-  return true;
+  // Verificar status - 'active' = válida
+  return licenseInfo.value.status === 'active';
 });
 
 // Settings form
@@ -308,62 +310,55 @@ onMounted(async () => {
     </div>
 
     <!-- Tela para contas SEM licença ativa -->
-    <div v-else-if="!hasValidLicense" class="p-8 max-w-3xl mx-auto">
+    <div v-else-if="!hasValidLicense" class="p-8 max-w-2xl mx-auto">
       <div class="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-8 text-center">
-        <div class="text-6xl mb-6">🔒</div>
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+        <div class="text-5xl mb-4">🔒</div>
+        <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">
           Módulo SDR IA não ativado
         </h2>
         <p class="text-slate-600 dark:text-slate-400 mb-6">
-          Esta conta não possui uma licença ativa para o módulo SDR IA.
-          Para ativar a qualificação automática de leads com Inteligência Artificial,
-          entre em contato com o administrador do sistema.
+          Esta conta não possui uma licença ativa para o SDR IA.
         </p>
 
-        <div class="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6 mb-6">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-            O que você ganha com o SDR IA?
-          </h3>
-          <ul class="text-left text-slate-600 dark:text-slate-400 space-y-3">
-            <li class="flex items-start">
-              <span class="text-green-500 mr-2">✓</span>
-              <span>Qualificação automática de leads com IA</span>
-            </li>
-            <li class="flex items-start">
-              <span class="text-green-500 mr-2">✓</span>
-              <span>Sistema de scoring e classificação por temperatura</span>
-            </li>
-            <li class="flex items-start">
-              <span class="text-green-500 mr-2">✓</span>
-              <span>Distribuição automática para closers (Round Robin)</span>
-            </li>
-            <li class="flex items-start">
-              <span class="text-green-500 mr-2">✓</span>
-              <span>Perguntas personalizáveis por etapa do funil</span>
-            </li>
-            <li class="flex items-start">
-              <span class="text-green-500 mr-2">✓</span>
-              <span>Base de conhecimento integrada</span>
-            </li>
-          </ul>
-        </div>
-
-        <div v-if="licenseInfo" class="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          <p v-if="licenseInfo.message">{{ licenseInfo.message }}</p>
-          <p v-if="licenseInfo.license_details?.status === 'expired'" class="text-red-600 dark:text-red-400">
-            Sua licença expirou em {{ new Date(licenseInfo.license_details.expires_at).toLocaleDateString('pt-BR') }}
-          </p>
-          <p v-if="licenseInfo.license_details?.status === 'suspended'" class="text-orange-600 dark:text-orange-400">
-            Sua licença está suspensa. Entre em contato para reativar.
+        <!-- Status da licença se existir -->
+        <div v-if="licenseInfo && licenseInfo.status" class="mb-6 p-4 rounded-lg"
+             :class="{
+               'bg-red-50 dark:bg-red-900/20': licenseInfo.status === 'expired',
+               'bg-orange-50 dark:bg-orange-900/20': licenseInfo.status === 'suspended',
+               'bg-slate-50 dark:bg-slate-700/50': !['expired', 'suspended'].includes(licenseInfo.status)
+             }">
+          <p class="text-sm font-medium"
+             :class="{
+               'text-red-700 dark:text-red-300': licenseInfo.status === 'expired',
+               'text-orange-700 dark:text-orange-300': licenseInfo.status === 'suspended',
+               'text-slate-700 dark:text-slate-300': !['expired', 'suspended'].includes(licenseInfo.status)
+             }">
+            Status: {{ licenseInfo.status === 'expired' ? 'Expirada' :
+                       licenseInfo.status === 'suspended' ? 'Suspensa' :
+                       licenseInfo.status === 'cancelled' ? 'Cancelada' : licenseInfo.status }}
           </p>
         </div>
 
-        <div class="flex justify-center gap-4">
+        <!-- Campo para URL de ativação -->
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 text-left">
+            URL para solicitar ativação (opcional)
+          </label>
+          <input
+            v-model="activationUrl"
+            type="url"
+            placeholder="https://seusite.com/ativar-sdr-ia"
+            class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+          />
+        </div>
+
+        <div class="flex justify-center">
           <a
-            href="mailto:suporte@seudominio.com"
+            :href="activationUrl || 'mailto:suporte@seudominio.com'"
+            :target="activationUrl ? '_blank' : '_self'"
             class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Solicitar Ativação
+            {{ activationUrl ? 'Solicitar Ativação' : 'Entrar em Contato' }}
           </a>
         </div>
       </div>
