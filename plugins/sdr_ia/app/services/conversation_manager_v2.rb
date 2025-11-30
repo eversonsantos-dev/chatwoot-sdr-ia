@@ -25,13 +25,17 @@ module SdrIa
       # Obter histórico da conversa
       history = build_conversation_history
 
-      # Verificar se deve qualificar (muitas mensagens ou sinais claros)
-      if should_qualify_now?(history)
-        Rails.logger.info "[SDR IA] [V2] Iniciando qualificação final..."
+      # NOVO: Fazer mini-análise para saber estado atual
+      @current_state = extract_current_state(history)
+      Rails.logger.info "[SDR IA] [V2] Estado atual: #{@current_state['informacoes_coletadas']}/5 informações"
+
+      # Verificar se deve qualificar (análise inteligente)
+      if should_qualify_now?(history, @current_state)
+        Rails.logger.info "[SDR IA] [V2] Qualificação completa detectada! Iniciando finalização..."
         qualify_lead(history)
       else
-        # Gerar resposta conversacional
-        generate_conversational_response(history)
+        # Gerar resposta conversacional COM CONTEXTO do estado atual
+        generate_conversational_response(history, @current_state)
       end
     rescue StandardError => e
       Rails.logger.error "[SDR IA] [V2] Erro ao processar mensagem: #{e.message}"
@@ -97,25 +101,36 @@ module SdrIa
       history
     end
 
-    def should_qualify_now?(history)
+    def should_qualify_now?(history, current_state = nil)
       # Contar apenas mensagens do lead (incoming)
       lead_messages_count = history.count { |msg| msg[:role] == 'user' }
-
-      # Qualificar se:
-      # 1. Já trocou muitas mensagens (>= 8 mensagens do lead)
-      # 2. Lead disse explicitamente que quer finalizar/falar com humano
       last_message = history.last[:content].to_s.downcase if history.last
 
-      lead_messages_count >= 8 ||
+      # NOVO: Threshold dinâmico baseado em informações coletadas
+      infos_coletadas = current_state&.dig('informacoes_coletadas') || 0
+      qualificacao_completa = current_state&.dig('qualificacao_completa') || false
+
+      # Qualificar se:
+      # 1. Mini-análise detectou qualificação completa (4-5 informações)
+      # 2. Já tem 4+ informações E pelo menos 3 mensagens do lead
+      # 3. Já trocou muitas mensagens (>= 6 do lead) - reduzido de 8
+      # 4. Lead disse explicitamente que quer finalizar/falar com humano
+
+      qualificacao_completa ||
+        (infos_coletadas >= 4 && lead_messages_count >= 3) ||
+        lead_messages_count >= 6 ||
         last_message&.include?('falar com') ||
         last_message&.include?('atendente') ||
         last_message&.include?('humano') ||
-        last_message&.include?('pessoa')
+        last_message&.include?('pessoa') ||
+        last_message&.include?('especialista')
     end
 
-    def generate_conversational_response(history)
+    def generate_conversational_response(history, current_state = nil)
       client = OpenaiClient.new(@account)
-      system_prompt = get_conversational_system_prompt
+
+      # NOVO: Injetar contexto do estado atual no prompt
+      system_prompt = get_conversational_system_prompt_with_context(current_state)
 
       # Gerar resposta usando OpenAI
       response = client.generate_response(history, system_prompt)
@@ -205,6 +220,125 @@ module SdrIa
       end
 
       base_prompt
+    end
+
+    # NOVO: Prompt com contexto do estado atual da qualificação
+    def get_conversational_system_prompt_with_context(current_state)
+      base_prompt = get_conversational_system_prompt
+
+      return base_prompt unless current_state
+
+      # Construir seção de estado atual
+      nome = current_state['nome']
+      interesse = current_state['interesse']
+      urgencia = current_state['urgencia']
+      conhecimento = current_state['conhecimento']
+      localizacao = current_state['localizacao']
+      faltantes = current_state['informacoes_faltantes'] || []
+
+      estado_section = <<~ESTADO
+
+        ---
+        # ESTADO ATUAL DA QUALIFICAÇÃO (INFORMAÇÃO INTERNA - NÃO MENCIONE ISSO AO LEAD)
+
+        ## Informações JÁ COLETADAS (NÃO pergunte novamente):
+        #{nome ? "- Nome: #{nome} ✓" : "- Nome: NÃO COLETADO"}
+        #{interesse ? "- Interesse/Procedimento: #{interesse} ✓" : "- Interesse: NÃO COLETADO"}
+        #{urgencia && urgencia != 'null' ? "- Urgência: #{urgencia} ✓" : "- Urgência: NÃO COLETADA"}
+        #{conhecimento && conhecimento != 'null' ? "- Conhecimento: #{conhecimento} ✓" : "- Conhecimento: NÃO COLETADO"}
+        #{localizacao ? "- Localização: #{localizacao} ✓" : "- Localização: NÃO COLETADA"}
+
+        ## O QUE FALTA COLETAR (priorize estas):
+        #{faltantes.any? ? faltantes.map { |f| "- #{f}" }.join("\n") : "- Todas as informações coletadas!"}
+
+        ## INSTRUÇÕES IMPORTANTES:
+        1. NUNCA pergunte algo que já foi coletado acima
+        2. Foque em coletar AS INFORMAÇÕES FALTANTES de forma natural
+        3. Se o lead já deu várias informações, agradeça e pergunte só o que falta
+        4. Se todas informações estão coletadas, finalize a qualificação
+        5. Trate o lead pelo nome se já souber
+        ---
+
+      ESTADO
+
+      base_prompt + estado_section
+    end
+
+    # NOVO: Extrai estado atual da conversa via mini-análise
+    def extract_current_state(history)
+      return default_state if history.empty?
+
+      # Montar conversa para análise
+      conversation_text = history.map do |msg|
+        role_label = msg[:role] == 'user' ? 'Lead' : 'Atendente'
+        "#{role_label}: #{msg[:content]}"
+      end.join("\n")
+
+      # Fazer mini-análise rápida
+      client = OpenaiClient.new(@account)
+      result = client.quick_extract(conversation_text)
+
+      if result
+        # Calcular informações coletadas
+        infos = 0
+        faltantes = []
+
+        if result['nome'].present? && result['nome'] != 'null'
+          infos += 1
+        else
+          faltantes << 'nome'
+        end
+
+        if result['interesse'].present? && result['interesse'] != 'null'
+          infos += 1
+        else
+          faltantes << 'interesse/procedimento'
+        end
+
+        if result['urgencia'].present? && result['urgencia'] != 'null'
+          infos += 1
+        else
+          faltantes << 'urgência'
+        end
+
+        if result['conhecimento'].present? && result['conhecimento'] != 'null'
+          infos += 1
+        else
+          faltantes << 'conhecimento sobre o procedimento'
+        end
+
+        if result['localizacao'].present? && result['localizacao'] != 'null'
+          infos += 1
+        else
+          faltantes << 'localização (bairro/cidade)'
+        end
+
+        result['informacoes_coletadas'] = infos
+        result['informacoes_faltantes'] = faltantes
+        result['qualificacao_completa'] = infos >= 4
+
+        Rails.logger.info "[SDR IA] [V2] Mini-análise: #{infos}/5 infos. Faltam: #{faltantes.join(', ')}"
+        result
+      else
+        Rails.logger.warn "[SDR IA] [V2] Mini-análise falhou, usando estado padrão"
+        default_state
+      end
+    rescue StandardError => e
+      Rails.logger.error "[SDR IA] [V2] Erro na extração de estado: #{e.message}"
+      default_state
+    end
+
+    def default_state
+      {
+        'nome' => nil,
+        'interesse' => nil,
+        'urgencia' => nil,
+        'conhecimento' => nil,
+        'localizacao' => nil,
+        'informacoes_coletadas' => 0,
+        'informacoes_faltantes' => %w[nome interesse urgência conhecimento localização],
+        'qualificacao_completa' => false
+      }
     end
 
     def get_fallback_system_prompt
