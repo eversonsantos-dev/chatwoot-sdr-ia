@@ -6,14 +6,15 @@ module SdrIa
   class MessageBuffer
     # BUFFER_WINDOW: Tempo de espera para agrupar mensagens
     #
-    # Configurado para 35 segundos (meio termo entre 30-45s)
-    # Este tempo permite que o lead envie múltiplas mensagens em sequência
-    # sem que a IA responda cada uma individualmente.
+    # Configurado para 15 segundos (alinhado com práticas do mercado)
+    # Este tempo permite capturar 2-3 mensagens consecutivas rápidas
+    # sem fazer o cliente esperar demais.
     #
     # Exemplo de uso:
-    # Lead envia: "Oi" + "Tudo bem?" + "Pode me ajudar?" + "Quais procedimentos?"
-    # Sistema aguarda 35s → IA processa tudo junto → Responde UMA vez
-    BUFFER_WINDOW = 35.seconds
+    # Lead envia: "Oi" + "Tudo bem?" → Sistema aguarda 15s → Responde
+    #
+    # Referência: WhatsApp Business bots (10-15s), Intercom (8-12s)
+    BUFFER_WINDOW = 15.seconds
 
     REDIS_KEY_PREFIX = 'sdr_ia:message_buffer'
 
@@ -31,8 +32,8 @@ module SdrIa
       # Adicionar mensagem ao buffer (usando Redis Set)
       @redis.sadd(buffer_key, message_id)
 
-      # Definir TTL de 45 segundos (maior que BUFFER_WINDOW de 35s)
-      @redis.expire(buffer_key, 45)
+      # Definir TTL de 25 segundos (maior que BUFFER_WINDOW de 15s)
+      @redis.expire(buffer_key, 25)
 
       # Cancelar job agendado anterior (se existir)
       cancel_pending_job
@@ -41,7 +42,7 @@ module SdrIa
       job = ProcessBufferedMessagesJob.set(wait: BUFFER_WINDOW).perform_later(conversation_id)
 
       # Guardar job_id no Redis para poder cancelar (TTL maior que BUFFER_WINDOW)
-      @redis.setex(job_key, 45, job.provider_job_id)
+      @redis.setex(job_key, 25, job.provider_job_id)
 
       Rails.logger.info "[SDR IA] [Buffer] Mensagem #{message_id} adicionada ao buffer. Processamento em #{BUFFER_WINDOW}s"
 
