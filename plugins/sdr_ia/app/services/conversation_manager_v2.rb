@@ -106,24 +106,29 @@ module SdrIa
       lead_messages_count = history.count { |msg| msg[:role] == 'user' }
       last_message = history.last[:content].to_s.downcase if history.last
 
-      # NOVO: Threshold dinâmico baseado em informações coletadas
+      # Threshold baseado em informações coletadas
       infos_coletadas = current_state&.dig('informacoes_coletadas') || 0
-      qualificacao_completa = current_state&.dig('qualificacao_completa') || false
 
-      # Qualificar se:
-      # 1. Mini-análise detectou qualificação completa (4-5 informações)
-      # 2. Já tem 4+ informações E pelo menos 3 mensagens do lead
-      # 3. Já trocou muitas mensagens (>= 6 do lead) - reduzido de 8
-      # 4. Lead disse explicitamente que quer finalizar/falar com humano
+      # Qualificar APENAS se:
+      # 1. Tem TODAS as 5 informações obrigatórias
+      # 2. OU já trocou muitas mensagens (>= 8 do lead) - força qualificação
+      # 3. OU lead disse explicitamente que quer finalizar/falar com humano
 
-      qualificacao_completa ||
-        (infos_coletadas >= 4 && lead_messages_count >= 3) ||
-        lead_messages_count >= 6 ||
-        last_message&.include?('falar com') ||
-        last_message&.include?('atendente') ||
-        last_message&.include?('humano') ||
-        last_message&.include?('pessoa') ||
-        last_message&.include?('especialista')
+      todas_informacoes = infos_coletadas >= 5
+      muitas_mensagens = lead_messages_count >= 8
+      quer_humano = last_message&.include?('falar com') ||
+                    last_message&.include?('atendente') ||
+                    last_message&.include?('humano') ||
+                    last_message&.include?('pessoa') ||
+                    last_message&.include?('especialista')
+
+      if todas_informacoes
+        Rails.logger.info "[SDR IA] [V2] ✅ Todas as 5 informações coletadas! Qualificando..."
+      elsif muitas_mensagens
+        Rails.logger.info "[SDR IA] [V2] ⚠️ Muitas mensagens (#{lead_messages_count}), forçando qualificação com #{infos_coletadas}/5 infos"
+      end
+
+      todas_informacoes || muitas_mensagens || quer_humano
     end
 
     def generate_conversational_response(history, current_state = nil)
@@ -315,9 +320,9 @@ module SdrIa
 
         result['informacoes_coletadas'] = infos
         result['informacoes_faltantes'] = faltantes
-        result['qualificacao_completa'] = infos >= 4
+        result['qualificacao_completa'] = infos >= 5  # Exige TODAS as 5 informações
 
-        Rails.logger.info "[SDR IA] [V2] Mini-análise: #{infos}/5 infos. Faltam: #{faltantes.join(', ')}"
+        Rails.logger.info "[SDR IA] [V2] Mini-análise: #{infos}/5 infos. Faltam: #{faltantes.any? ? faltantes.join(', ') : 'NENHUMA - COMPLETO!'}"
         result
       else
         Rails.logger.warn "[SDR IA] [V2] Mini-análise falhou, usando estado padrão"
