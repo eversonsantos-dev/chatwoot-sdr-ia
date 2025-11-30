@@ -102,33 +102,47 @@ module SdrIa
     end
 
     def should_qualify_now?(history, current_state = nil)
-      # Contar apenas mensagens do lead (incoming)
-      lead_messages_count = history.count { |msg| msg[:role] == 'user' }
       last_message = history.last[:content].to_s.downcase if history.last
 
-      # Threshold baseado em informações coletadas
+      # Verificar se tem TODAS as 5 informações obrigatórias
       infos_coletadas = current_state&.dig('informacoes_coletadas') || 0
-
-      # Qualificar APENAS se:
-      # 1. Tem TODAS as 5 informações obrigatórias
-      # 2. OU já trocou muitas mensagens (>= 8 do lead) - força qualificação
-      # 3. OU lead disse explicitamente que quer finalizar/falar com humano
-
       todas_informacoes = infos_coletadas >= 5
-      muitas_mensagens = lead_messages_count >= 8
+
+      # Verificar se lead quer falar com humano (atalho para qualificação)
       quer_humano = last_message&.include?('falar com') ||
                     last_message&.include?('atendente') ||
                     last_message&.include?('humano') ||
                     last_message&.include?('pessoa') ||
                     last_message&.include?('especialista')
 
+      # REGRA PRINCIPAL: Só qualifica com as 5 informações!
+      # NÃO importa quantas mensagens o lead mandou.
+      # A IA DEVE passar pelas 5 perguntas obrigatórias:
+      # 1. Nome
+      # 2. Interesse (procedimento)
+      # 3. Conhecimento
+      # 4. Urgência
+      # 5. Localização (cidade/bairro)
+
       if todas_informacoes
-        Rails.logger.info "[SDR IA] [V2] ✅ Todas as 5 informações coletadas! Qualificando..."
-      elsif muitas_mensagens
-        Rails.logger.info "[SDR IA] [V2] ⚠️ Muitas mensagens (#{lead_messages_count}), forçando qualificação com #{infos_coletadas}/5 infos"
+        Rails.logger.info "[SDR IA] [V2] ✅ TODAS as 5 informações coletadas! Qualificando lead..."
+        Rails.logger.info "[SDR IA] [V2] Nome: #{current_state['nome']}"
+        Rails.logger.info "[SDR IA] [V2] Interesse: #{current_state['interesse']}"
+        Rails.logger.info "[SDR IA] [V2] Conhecimento: #{current_state['conhecimento']}"
+        Rails.logger.info "[SDR IA] [V2] Urgência: #{current_state['urgencia']}"
+        Rails.logger.info "[SDR IA] [V2] Localização: #{current_state['localizacao']}"
+        return true
       end
 
-      todas_informacoes || muitas_mensagens || quer_humano
+      if quer_humano
+        Rails.logger.info "[SDR IA] [V2] Lead solicitou falar com humano. Qualificando com #{infos_coletadas}/5 infos..."
+        return true
+      end
+
+      # Ainda faltam informações - continuar qualificação
+      faltantes = current_state&.dig('informacoes_faltantes') || []
+      Rails.logger.info "[SDR IA] [V2] Aguardando... #{infos_coletadas}/5 infos. Faltam: #{faltantes.join(', ')}"
+      false
     end
 
     def generate_conversational_response(history, current_state = nil)
